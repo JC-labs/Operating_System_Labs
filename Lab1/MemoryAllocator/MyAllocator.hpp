@@ -2,6 +2,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <algorithm>
+#include <functional>
 namespace MyAllocator {
 	namespace Additional {
 		struct header {
@@ -25,7 +26,6 @@ namespace MyAllocator {
 		Type *inner_memory;
 		std::shared_mutex memory_mutex;
 	protected:
-		Additional::header** get_head() { return reinterpret_cast<Additional::header**>(inner_memory); }
 		Additional::header** find_free(size_t const n) {
 			std::shared_lock<std::shared_mutex>(memory_mutex);
 			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next)
@@ -101,5 +101,13 @@ namespace MyAllocator {
 			}
 			throw Exceptions::reallocation_has_failed();
 		}
+		Additional::header** get_head() { return reinterpret_cast<Additional::header**>(inner_memory); }
+		void monitor(std::function<void(Additional::header const**)> monitor) {
+			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next) {
+				std::shared_lock<std::shared_mutex>(memory_mutex);
+				monitor(const_cast<Additional::header const**>(temp));
+			}
+		}
+		static size_t const memory_size = memory_pool;
 	};
 }
