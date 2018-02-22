@@ -82,31 +82,22 @@ namespace MyAllocator {
 		Type* reallocate(Type *ptr, size_t const n) {
 			auto origin = reinterpret_cast<Additional::header**>(ptr - 1);
 			auto shift = reinterpret_cast<Type*>(origin) - reinterpret_cast<Type*>(&inner_memory[0]);
-			if ((*origin)->next - origin > n) {
+			if ((*origin)->next - origin > n || (!(*(*origin)->next)->state && (*(*origin)->next)->next - origin > n)) {
 				Additional::header *free_space;
-				if ((*(*origin)->next)->state)
-					free_space = (new Additional::header((*origin)->next, origin, false));
-				else
+				if (!(*(*origin)->next)->state)
 					free_space = *(*origin)->next;
+				else
+					free_space = (new Additional::header((*origin)->next, origin, false));
 				free_space->prev = reinterpret_cast<Additional::header**>(inner_memory + shift);
 				(*origin)->next = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
 				inner_memory[shift + n] = reinterpret_cast<Type>(free_space);
 				(*free_space->next)->prev = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
 				return ptr;
 			} else {
-				if (!(*(*origin)->next)->state && (*(*origin)->next)->next - origin > n) {
-					auto free_space = *(*origin)->next;
-					free_space->prev = reinterpret_cast<Additional::header**>(inner_memory + shift);
-					(*origin)->next = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
-					inner_memory[shift + n] = reinterpret_cast<Type>(free_space);
-					(*free_space->next)->prev = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
-					return ptr;
-				} else {
-					auto temp_ptr = allocate(n);
-					std::move(ptr, ptr + ((*origin)->next - origin), temp_ptr);
-					deallocate(ptr);
-					return temp_ptr;
-				}
+				auto temp_ptr = allocate(n);
+				std::move(ptr, ptr + ((*origin)->next - origin), temp_ptr);
+				deallocate(ptr);
+				return temp_ptr;
 			}
 			throw Exceptions::reallocation_has_failed();
 		}
