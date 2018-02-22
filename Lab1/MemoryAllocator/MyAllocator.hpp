@@ -8,7 +8,8 @@ namespace MyAllocator {
 			header **next;
 			header **prev;
 			header() : state(false), next(nullptr) {}
-			header(header **_next, header **_prev, bool _state = false) : state(_state), next(_next), prev(_prev) {}
+			header(header **_next, header **_prev, bool _state = false) 
+				: state(_state), next(_next), prev(_prev) {}
 		};
 	}
 	void test();
@@ -32,8 +33,8 @@ namespace MyAllocator {
 		MyAllocator() {
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			inner_memory = new Type[memory_pool];
-			Additional::header *temp_head = new Additional::header(reinterpret_cast<Additional::header**>(inner_memory + memory_pool - 1), nullptr, false),
-				*temp_tail = new Additional::header(nullptr, reinterpret_cast<Additional::header**>(inner_memory), true);
+			Additional::header *temp_tail = new Additional::header(nullptr, reinterpret_cast<Additional::header**>(inner_memory), true),
+				*temp_head = new Additional::header(reinterpret_cast<Additional::header**>(inner_memory + memory_pool - 1), nullptr, false);
 			inner_memory[memory_pool - 1] = reinterpret_cast<Type>(temp_tail);
 			inner_memory[0] = reinterpret_cast<Type>(temp_head);
 		}
@@ -52,18 +53,27 @@ namespace MyAllocator {
 			auto free_space = find_free(n);
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			Additional::header *occupied_header = new Additional::header(nullptr, (*free_space)->prev, true);
-
-			auto free = reinterpret_cast<Type*>(free_space) - reinterpret_cast<Type*>(&inner_memory[0]) + n;
-			auto occp = reinterpret_cast<Type*>(free_space) - reinterpret_cast<Type*>(&inner_memory[0]);
-
-			(*free_space)->prev = reinterpret_cast<Additional::header**>(inner_memory + occp);
-			occupied_header->next = reinterpret_cast<Additional::header**>(inner_memory + free);
-			inner_memory[free] = reinterpret_cast<Type>(*free_space);
-			inner_memory[occp] = reinterpret_cast<Type>(occupied_header);
+			auto shift = reinterpret_cast<Type*>(free_space) - reinterpret_cast<Type*>(&inner_memory[0]);
+			(*free_space)->prev = reinterpret_cast<Additional::header**>(inner_memory + shift);
+			occupied_header->next = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
+			inner_memory[shift + n] = reinterpret_cast<Type>(*free_space);
+			inner_memory[shift] = reinterpret_cast<Type>(occupied_header);
+			(*(*(*free_space)->next)->next)->prev = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
 			return reinterpret_cast<Type*>(free_space) + 1;
 		}
 		void deallocate(Type *ptr) {
-
+			auto freed = reinterpret_cast<Additional::header**>(ptr - 1);
+			std::unique_lock<std::shared_mutex>(memory_mutex);
+			if (!(*(*freed)->next)->state) {
+				auto temp = (*freed)->next;	
+				(*freed)->next = (*(*freed)->next)->next;
+				delete *temp;
+			}
+			if (!(*(*freed)->prev)->state) {
+				(*(*freed)->prev)->next = (*freed)->next;
+				delete *freed;
+			} else
+				(*freed)->state = false;
 		}
 		Type* reallocate(Type *ptr, size_t const n) {
 
