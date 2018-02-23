@@ -14,15 +14,12 @@ namespace MyAllocator {
 				: state(_state), next(_next), prev(_prev) {}
 		};
 	}
-	void test();
 	namespace Exceptions { 
 		class allocation_is_not_possible : public std::exception {};
 		class reallocation_has_failed : public std::exception {};
 	}
 	template <size_t memory_pool = 1024 * 8, typename Type = unsigned long long>
 	class MyAllocator : public std::allocator<Type> {
-		friend void test();
-	private:
 		Type *inner_memory;
 		std::shared_mutex memory_mutex;
 	protected:
@@ -69,11 +66,13 @@ namespace MyAllocator {
 			auto freed = reinterpret_cast<Additional::header**>(ptr - 1);
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			if (!(*(*freed)->next)->state) {
-				auto temp = (*freed)->next;	
+				auto temp = (*freed)->next;
 				(*freed)->next = (*(*freed)->next)->next;
+				(*(*freed)->next)->prev = freed;
 				delete *temp;
 			}
-			if ((*freed)->prev && !(*(*freed)->prev)->state) {
+			if (!(*freed)->prev && !(*(*freed)->prev)->state) {
+				(*(*freed)->next)->prev = (*freed)->prev;
 				(*(*freed)->prev)->next = (*freed)->next;
 				delete *freed;
 			} else
@@ -99,7 +98,6 @@ namespace MyAllocator {
 				deallocate(ptr);
 				return temp_ptr;
 			}
-			throw Exceptions::reallocation_has_failed();
 		}
 		Additional::header** get_head() { return reinterpret_cast<Additional::header**>(inner_memory); }
 		void monitor(std::function<void(Additional::header const**)> monitor) {
