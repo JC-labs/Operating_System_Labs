@@ -2,7 +2,7 @@
 #include "MemoryMonitor.hpp"
 #include <QPushButton>
 #include <QSpinBox>
-MemoryAllocatorTester::MemoryAllocatorTester(MyAllocator::MyAllocator<1024 * 16> *alloc, QWidget *parent) : QWidget(parent) {
+MemoryAllocatorTester::MemoryAllocatorTester(MyAllocator::MyAllocator<1024 * 32> *alloc, QWidget *parent) : QWidget(parent) {
 	ui.setupUi(this);
 	ui.monitor_layout->addWidget(new MemoryMonitor(m_allocator = alloc));
 

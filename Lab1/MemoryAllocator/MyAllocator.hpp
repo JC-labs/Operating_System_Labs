@@ -3,15 +3,15 @@
 #include <shared_mutex>
 #include <algorithm>
 #include <functional>
+#include "AbstractAllocator.hpp"
 namespace MyAllocator {
 	namespace Additional {
-		struct header {
-			bool state;
+		struct header : abstract_header {
 			header **next;
 			header **prev;
-			header() : state(false), next(nullptr) {}
+			header() : abstract_header(false), next(nullptr) {}
 			header(header **_next, header **_prev, bool _state = false) 
-				: state(_state), next(_next), prev(_prev) {}
+				: abstract_header(_state), next(_next), prev(_prev) {}
 		};
 	}
 	namespace Exceptions { 
@@ -20,6 +20,7 @@ namespace MyAllocator {
 	}
 	template <size_t memory_pool = 1024 * 8, typename Type = unsigned long long>
 	class MyAllocator : public std::allocator<Type> {
+	protected:
 		Type *inner_memory;
 		std::shared_mutex memory_mutex;
 	protected:
@@ -99,11 +100,13 @@ namespace MyAllocator {
 				return temp_ptr;
 			}
 		}
-		Additional::header** get_head() { return reinterpret_cast<Additional::header**>(inner_memory); }
-		virtual void monitor(std::function<void(Additional::header const**)> monitor) {
+	public:
+		Additional::abstract_header** get_head() { return reinterpret_cast<Additional::abstract_header**>(inner_memory); }
+		void monitor(std::function<void(Additional::abstract_header const**, Additional::abstract_header const**)> monitor) {
 			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next) {
 				std::shared_lock<std::shared_mutex>(memory_mutex);
-				monitor(const_cast<Additional::header const**>(temp));
+				monitor(const_cast<Additional::abstract_header const**>(reinterpret_cast<Additional::abstract_header**>(temp)),
+						const_cast<Additional::abstract_header const**>(reinterpret_cast<Additional::abstract_header**>((*temp)->next)));
 			}
 		}
 		static size_t const memory_size = memory_pool;
