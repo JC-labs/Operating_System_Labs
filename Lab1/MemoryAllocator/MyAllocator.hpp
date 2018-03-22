@@ -23,7 +23,7 @@ namespace MyAllocator {
 		Type *inner_memory;
 		std::shared_mutex memory_mutex;
 	protected:
-		Additional::header** find_free(size_t const n) {
+		virtual Additional::header** find_free(size_t const n) {
 			std::shared_lock<std::shared_mutex>(memory_mutex);
 			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next)
 				if (!(*temp)->state && (*temp)->next - temp > n)
@@ -39,7 +39,7 @@ namespace MyAllocator {
 			inner_memory[memory_pool - 1] = reinterpret_cast<Type>(temp_tail);
 			inner_memory[0] = reinterpret_cast<Type>(temp_head);
 		}
-		~MyAllocator() {
+		virtual ~MyAllocator() {
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			auto temp = reinterpret_cast<Additional::header**>(inner_memory);
 			do {
@@ -50,7 +50,7 @@ namespace MyAllocator {
 			delete *temp;
 			delete inner_memory;
 		}
-		Type* allocate(size_t const n) {
+		virtual Type* allocate(size_t const n) {
 			auto free_space = find_free(n);
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			Additional::header *occupied_header = new Additional::header(nullptr, (*free_space)->prev, true);
@@ -62,7 +62,7 @@ namespace MyAllocator {
 			(*(*(*free_space)->next)->next)->prev = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
 			return reinterpret_cast<Type*>(free_space) + 1;
 		}
-		void deallocate(Type *ptr) {
+		virtual void deallocate(Type *ptr) {
 			auto freed = reinterpret_cast<Additional::header**>(ptr - 1);
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			if (!(*(*freed)->next)->state) {
@@ -78,7 +78,7 @@ namespace MyAllocator {
 			} else
 				(*freed)->state = false;
 		}
-		Type* reallocate(Type *ptr, size_t const n) {
+		virtual Type* reallocate(Type *ptr, size_t const n) {
 			auto origin = reinterpret_cast<Additional::header**>(ptr - 1);
 			auto shift = reinterpret_cast<Type*>(origin) - reinterpret_cast<Type*>(&inner_memory[0]);
 			if ((*origin)->next - origin > n || (!(*(*origin)->next)->state && (*(*origin)->next)->next - origin > n)) {
@@ -100,7 +100,7 @@ namespace MyAllocator {
 			}
 		}
 		Additional::header** get_head() { return reinterpret_cast<Additional::header**>(inner_memory); }
-		void monitor(std::function<void(Additional::header const**)> monitor) {
+		virtual void monitor(std::function<void(Additional::header const**)> monitor) {
 			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next) {
 				std::shared_lock<std::shared_mutex>(memory_mutex);
 				monitor(const_cast<Additional::header const**>(temp));

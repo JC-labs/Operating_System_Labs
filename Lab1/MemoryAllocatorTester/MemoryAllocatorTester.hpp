@@ -5,7 +5,7 @@
 class MemoryAllocatorTester : public QWidget {
 	Q_OBJECT
 public:
-	MemoryAllocatorTester(QWidget *parent = Q_NULLPTR);
+	MemoryAllocatorTester(MyAllocator::MyAllocator<1024 * 16> *alloc, QWidget *parent = Q_NULLPTR);
 	~MemoryAllocatorTester();
 private:
 	Ui::MemoryAllocatorTesterClass ui;
