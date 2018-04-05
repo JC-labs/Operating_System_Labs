@@ -1,9 +1,8 @@
 #pragma once
-#include <memory>
-#include <shared_mutex>
+#include "AbstractAllocator.hpp"
+//#include <memory>
 #include <algorithm>
 #include <functional>
-#include "AbstractAllocator.hpp"
 namespace MyAllocator {
 	namespace Additional {
 		struct header : abstract_header {
@@ -14,15 +13,8 @@ namespace MyAllocator {
 				: abstract_header(_state), next(_next), prev(_prev) {}
 		};
 	}
-	namespace Exceptions { 
-		class allocation_is_not_possible : public std::exception {};
-		class reallocation_has_failed : public std::exception {};
-	}
 	template <size_t memory_pool = 1024 * 8, typename Type = unsigned long long>
-	class MyAllocator : public std::allocator<Type> {
-	protected:
-		Type *inner_memory;
-		std::shared_mutex memory_mutex;
+	class MyAllocator : public AbstractAllocator<memory_pool, Type> {
 	protected:
 		virtual Additional::header** find_free(size_t const n) {
 			std::shared_lock<std::shared_mutex>(memory_mutex);
@@ -40,7 +32,7 @@ namespace MyAllocator {
 			inner_memory[memory_pool - 1] = reinterpret_cast<Type>(temp_tail);
 			inner_memory[0] = reinterpret_cast<Type>(temp_head);
 		}
-		virtual ~MyAllocator() {
+		virtual ~MyAllocator() override {
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			auto temp = reinterpret_cast<Additional::header**>(inner_memory);
 			do {
@@ -49,9 +41,9 @@ namespace MyAllocator {
 				delete *clr;
 			} while ((*temp)->next != nullptr);
 			delete *temp;
-			delete inner_memory;
+			delete[] inner_memory;
 		}
-		virtual Type* allocate(size_t const n) {
+		virtual Type* allocate(size_t const n) override {
 			auto free_space = find_free(n);
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			Additional::header *occupied_header = new Additional::header(nullptr, (*free_space)->prev, true);
@@ -63,7 +55,7 @@ namespace MyAllocator {
 			(*(*(*free_space)->next)->next)->prev = reinterpret_cast<Additional::header**>(inner_memory + shift + n);
 			return reinterpret_cast<Type*>(free_space) + 1;
 		}
-		virtual void deallocate(Type *ptr) {
+		virtual void deallocate(Type *ptr) override {
 			auto freed = reinterpret_cast<Additional::header**>(ptr - 1);
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			if (!(*(*freed)->next)->state) {
@@ -79,7 +71,7 @@ namespace MyAllocator {
 			} else
 				(*freed)->state = false;
 		}
-		virtual Type* reallocate(Type *ptr, size_t const n) {
+		virtual Type* reallocate(Type *&ptr, size_t const n) override {
 			auto origin = reinterpret_cast<Additional::header**>(ptr - 1);
 			auto shift = reinterpret_cast<Type*>(origin) - reinterpret_cast<Type*>(&inner_memory[0]);
 			if ((*origin)->next - origin > n || (!(*(*origin)->next)->state && (*(*origin)->next)->next - origin > n)) {
@@ -97,18 +89,18 @@ namespace MyAllocator {
 				auto temp_ptr = allocate(n);
 				std::move(ptr, ptr + ((*origin)->next - origin), temp_ptr);
 				deallocate(ptr);
+				ptr = temp_ptr;
 				return temp_ptr;
 			}
 		}
 	public:
-		Additional::abstract_header** get_head() { return reinterpret_cast<Additional::abstract_header**>(inner_memory); }
-		void monitor(std::function<void(Additional::abstract_header const**, Additional::abstract_header const**)> monitor) {
+		virtual Additional::abstract_header** get_head() override { return reinterpret_cast<Additional::abstract_header**>(inner_memory); }
+		virtual void monitor(std::function<void(Additional::abstract_header const**, Additional::abstract_header const**)> monitor) override {
 			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next) {
 				std::shared_lock<std::shared_mutex>(memory_mutex);
 				monitor(const_cast<Additional::abstract_header const**>(reinterpret_cast<Additional::abstract_header**>(temp)),
 						const_cast<Additional::abstract_header const**>(reinterpret_cast<Additional::abstract_header**>((*temp)->next)));
 			}
 		}
-		static size_t const memory_size = memory_pool;
 	};
 }

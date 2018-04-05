@@ -1,8 +1,7 @@
 #pragma once
-#include "MyAllocator.hpp"
-#include <unordered_map>
+#include "AbstractAllocator.hpp"
 #include "bitset.hpp"
-#include <cassert>
+#include <unordered_map>
 namespace MyAllocator {
 	namespace Additional {
 		enum class slab_type {
@@ -35,7 +34,7 @@ namespace MyAllocator {
 		size_t slab_size = 1024, 
 		typename Type = unsigned long long>
 	class MySlabAllocator 
-		: public MyAllocator<memory_pool, Type> {
+		: public AbstractAllocator<memory_pool, Type> {
 
 		static_assert(memory_pool % slab_size == 0, 
 					  "Stabs cannot be evenly distributed.");
@@ -43,10 +42,6 @@ namespace MyAllocator {
 		Additional::slab_header<slab_size> slabs[memory_pool / slab_size];
 		std::unordered_multimap<size_t, size_t> partial_slabs;
 	protected:
-		virtual Additional::header** find_free(size_t const n) override {
-			assert(false, "find free is not to be used in SlabAllocator");
-			return nullptr;
-		}
 		virtual size_t find_n_free_slabs(size_t const n) const {
 			std::shared_lock<std::shared_mutex>(memory_mutex);
 			size_t concurrent_free_slabs = 0;
@@ -60,11 +55,7 @@ namespace MyAllocator {
 			}
 		}
 	public:
-		MySlabAllocator() {
-			std::unique_lock<std::shared_mutex>(memory_mutex);
-			inner_memory = new Type[memory_pool];
-		}
-		virtual ~MySlabAllocator() override { delete inner_memory; }
+		using AbstractAllocator::AbstractAllocator;
 
 		virtual Type* allocate(size_t const n) override {
 			std::unique_lock<std::shared_mutex>(memory_mutex);
@@ -114,7 +105,7 @@ namespace MyAllocator {
 				}
 			}
 		}
-		virtual Type* reallocate(Type *ptr, size_t const n) override {
+		virtual Type* reallocate(Type *&ptr, size_t const n) override {
 			auto ret = allocate(n);
 			auto page = (ptr - inner_memory) / slab_size;
 			size_t size = 0;
@@ -128,6 +119,7 @@ namespace MyAllocator {
 			size = std::min(n, size);
 			std::move(ptr, ptr + size, ret);
 			deallocate(ptr);
+			ptr = ret;
 			return ret;
 		}
 	};
