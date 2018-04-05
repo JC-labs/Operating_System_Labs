@@ -4,7 +4,7 @@
 #include <unordered_map>
 namespace MyAllocator {
 	namespace Additional {
-		enum class slab_type {
+		enum class slab_state {
 			//undefined = -1,
 			free = 0,
 			partiated = 1,
@@ -12,14 +12,14 @@ namespace MyAllocator {
 			continuation = 3
 		};
 		template <size_t slab_size> struct slab_header {
-			slab_type type;
+			slab_state state;
 			size_t part_size;
 			bitset<> parts;
-			slab_header(slab_type _type = slab_type::free/*undefined*/) 
-				: type(_type) {}
+			slab_header(slab_state _type = slab_state::free/*undefined*/) 
+				: state(_type) {}
 			void make_partiated(size_t const _part_size, bool set_first_part = false) {
 				part_size = _part_size;
-				type = slab_type::partiated;
+				state = slab_state::partiated;
 				parts.resize(slab_size / part_size + 
 					(slab_size % part_size ? 1 : 0));
 				if (set_first_part) parts.set(0);
@@ -48,7 +48,7 @@ namespace MyAllocator {
 			for (size_t i = 0; i < memory_pool / slab_size; i++) {
 				if (concurrent_free_slabs >= n)
 					return i - concurrent_free_slabs;
-				if (slabs[i].type == Additional::slab_type::free)
+				if (slabs[i].state == Additional::slab_state::free)
 					concurrent_free_slabs++;
 				else
 					concurrent_free_slabs = 0;
@@ -62,9 +62,9 @@ namespace MyAllocator {
 			if (n > slab_size * 2) {
 				if (auto size = n / slab_size + (n % slab_size ? 1 : 0); size > 0) {
 					auto ret_index = find_n_free_slabs(size);
-					slabs[ret_index].type = Additional::slab_type::whole;
+					slabs[ret_index].state = Additional::slab_state::whole;
 					for (auto i = ret_index + 1; i < ret_index + size; i++)
-						slabs[i].type = Additional::slab_type::continuation;
+						slabs[i].state = Additional::slab_state::continuation;
 					return reinterpret_cast<Type*>(inner_memory + ret_index * slab_size);
 				} else
 					throw Exceptions::allocation_is_not_possible();
@@ -88,11 +88,11 @@ namespace MyAllocator {
 			auto a = ptr - inner_memory;
 			auto page = (ptr - inner_memory) / slab_size;
 			auto shift = (ptr - inner_memory) % slab_size / slabs[page].part_size;
-			if (shift == 0 && slabs[page].type == Additional::slab_type::whole) 
+			if (shift == 0 && slabs[page].state == Additional::slab_state::whole) 
 			{
 				do
-					slabs[page].type = Additional::slab_type::free;
-				while (slabs[++page].type == Additional::slab_type::continuation);
+					slabs[page].state = Additional::slab_state::free;
+				while (slabs[++page].state == Additional::slab_state::continuation);
 			} else {
 				slabs[page].parts.clear(shift);
 				if (~slabs[page].parts) {
@@ -101,7 +101,7 @@ namespace MyAllocator {
 						if (it->second == page) {
 							partial_slabs.erase(it); break;
 						}
-					slabs[page].type = Additional::slab_type::free;
+					slabs[page].state = Additional::slab_state::free;
 				}
 			}
 		}
@@ -110,9 +110,9 @@ namespace MyAllocator {
 			auto page = (ptr - inner_memory) / slab_size;
 			size_t size = 0;
 			if (auto shift = (ptr - inner_memory) % slab_size / slabs[page].part_size;
-				shift == 0 && slabs[page].type == Additional::slab_type::whole) 
+				shift == 0 && slabs[page].state == Additional::slab_state::whole) 
 			{
-				do size++; while (slabs[++page].type == Additional::slab_type::continuation);
+				do size++; while (slabs[++page].state == Additional::slab_state::continuation);
 				size *= slab_size;
 			} else
 				size = slabs[page].part_size;
@@ -121,6 +121,12 @@ namespace MyAllocator {
 			deallocate(ptr);
 			ptr = ret;
 			return ret;
+		}
+		virtual Additional::abstract_header** get_head() override {
+			
+		}
+		virtual void monitor(std::function<void(Additional::abstract_header const**, Additional::abstract_header const**)> monitor) override {
+
 		}
 	};
 }

@@ -1,5 +1,5 @@
 #include "MemoryMonitor.hpp"
-MemoryMonitor::MemoryMonitor(MyAllocator::MyAllocator<1024 * 32> *allocator, QWidget *parent)
+MemoryMonitor::MemoryMonitor(MyAllocator::AbstractAllocator<1024 * 32> *allocator, QWidget *parent)
 	: QOpenGLWidget(parent), m_allocator(allocator) {}
 MemoryMonitor::~MemoryMonitor() {}
 void MemoryMonitor::initializeGL() {
@@ -12,18 +12,15 @@ void MemoryMonitor::resizeGL(int w, int h) {
 	glOrtho(0, cells, m_allocator->memory_size / cells + 1, 0, -1, 1);
 	update();
 }
-void color(MyAllocator::Additional::abstract_header const **h) {
-	if ((*h)->state)
-		glColor3f(1, 0.8, 0.8);
-	else
+void color(bool state) {
+	if (state)
 		glColor3f(0.8, 1, 0.8);
+	else
+		glColor3f(1, 0.8, 0.8);
 }
 void MemoryMonitor::paintGL() {
 	glClear(GL_COLOR_BUFFER_BIT);
-	auto begin = m_allocator->get_head();
-	m_allocator->monitor([begin, this](MyAllocator::Additional::abstract_header const **h, MyAllocator::Additional::abstract_header const **next) {
-		size_t start = h - begin;
-		size_t end = next - begin;
+	m_allocator->monitor([this](bool is_free, size_t start, size_t end) {
 		size_t ex = end % cells;
 		size_t ey = end / cells;
 
@@ -31,7 +28,7 @@ void MemoryMonitor::paintGL() {
 		size_t y = start / cells;
 		if (y < ey) {
 			glBegin(GL_TRIANGLE_FAN);
-			color(h);
+			color(is_free);
 			glVertex2f(x, y);
 			glVertex2f(cells, y);
 			glVertex2f(cells, y + 1);
@@ -40,7 +37,7 @@ void MemoryMonitor::paintGL() {
 			y++;
 		} else {
 			glBegin(GL_TRIANGLE_FAN);
-			color(h);
+			color(is_free);
 			glVertex2f(x, y);
 			glVertex2f(ex, y);
 			glVertex2f(ex, y + 1);
@@ -50,7 +47,7 @@ void MemoryMonitor::paintGL() {
 		}
 		while (y < ey) {
 			glBegin(GL_TRIANGLE_FAN);
-			color(h);
+			color(is_free);
 			glVertex2f(0, y);
 			glVertex2f(cells, y);
 			glVertex2f(cells, y + 1);
@@ -59,7 +56,7 @@ void MemoryMonitor::paintGL() {
 			y++;
 		}
 		glBegin(GL_TRIANGLE_FAN);
-		color(h);
+		color(is_free);
 		glVertex2f(0, y);
 		glVertex2f(ex, y);
 		glVertex2f(ex, y + 1);

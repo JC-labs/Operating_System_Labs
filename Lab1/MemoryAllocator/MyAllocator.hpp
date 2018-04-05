@@ -32,7 +32,7 @@ namespace MyAllocator {
 			inner_memory[memory_pool - 1] = reinterpret_cast<Type>(temp_tail);
 			inner_memory[0] = reinterpret_cast<Type>(temp_head);
 		}
-		virtual ~MyAllocator() override {
+		~MyAllocator() {
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			auto temp = reinterpret_cast<Additional::header**>(inner_memory);
 			do {
@@ -94,12 +94,11 @@ namespace MyAllocator {
 			}
 		}
 	public:
-		virtual Additional::abstract_header** get_head() override { return reinterpret_cast<Additional::abstract_header**>(inner_memory); }
-		virtual void monitor(std::function<void(Additional::abstract_header const**, Additional::abstract_header const**)> monitor) override {
+		virtual void monitor(std::function<void(bool, size_t, size_t)> monitor) override {
 			for (auto temp = reinterpret_cast<Additional::header**>(inner_memory); (*temp)->next != nullptr; temp = (*temp)->next) {
 				std::shared_lock<std::shared_mutex>(memory_mutex);
-				monitor(const_cast<Additional::abstract_header const**>(reinterpret_cast<Additional::abstract_header**>(temp)),
-						const_cast<Additional::abstract_header const**>(reinterpret_cast<Additional::abstract_header**>((*temp)->next)));
+				monitor((*temp)->state, static_cast<size_t>(reinterpret_cast<Additional::abstract_header**>(temp) - reinterpret_cast<Additional::abstract_header**>(inner_memory)),
+						static_cast<size_t>(reinterpret_cast<Additional::abstract_header**>((*temp)->next) - reinterpret_cast<Additional::abstract_header**>(inner_memory)));
 			}
 		}
 	};
