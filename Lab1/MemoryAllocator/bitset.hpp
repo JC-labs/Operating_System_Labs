@@ -6,7 +6,7 @@ namespace MyAllocator {
 		template <typename type = size_t>
 		class bitset {
 			type *value;
-			const size_t size_of_value = sizeof(type);
+			const size_t size_of_value = sizeof(type) * 8;
 			size_t size, size_of_array;
 		public:
 			void resize(size_t n) {
@@ -36,6 +36,12 @@ namespace MyAllocator {
 			bool operator!() const {
 				for (size_t i = 0; i < size_of_array; i++)
 					if (value[i] != -1)
+						return false;
+				return true;
+			}
+			bool operator~() const {
+				for (size_t i = 0; i < size_of_array; i++)
+					if (value[i] != 0)
 						return false;
 				return true;
 			}

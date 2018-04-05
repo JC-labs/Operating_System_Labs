@@ -14,10 +14,12 @@ namespace MyAllocator {
 		};
 		template <size_t slab_size> struct slab_header {
 			slab_type type;
+			size_t part_size;
 			bitset<> parts;
 			slab_header(slab_type _type = slab_type::free/*undefined*/) 
 				: type(_type) {}
-			void make_partiated(size_t const part_size, bool set_first_part = false) {
+			void make_partiated(size_t const _part_size, bool set_first_part = false) {
+				part_size = _part_size;
 				type = slab_type::partiated;
 				parts.resize(slab_size / part_size + 
 					(slab_size % part_size ? 1 : 0));
@@ -84,7 +86,6 @@ namespace MyAllocator {
 							inner_memory + slab_size * it->second + index * it->first);
 					}
 				}
-
 				auto ret_index = find_n_free_slabs(1);
 				partial_slabs.insert(std::make_pair(n, ret_index));
 				slabs[ret_index].make_partiated(n, true);
@@ -93,10 +94,41 @@ namespace MyAllocator {
 			throw Exceptions::allocation_is_not_possible();
 		}
 		virtual void deallocate(Type *ptr) override {
-		
+			auto a = ptr - inner_memory;
+			auto page = (ptr - inner_memory) / slab_size;
+			auto shift = (ptr - inner_memory) % slab_size / slabs[page].part_size;
+			if (shift == 0 && slabs[page].type == Additional::slab_type::whole) 
+			{
+				do
+					slabs[page].type = Additional::slab_type::free;
+				while (slabs[++page].type == Additional::slab_type::continuation);
+			} else {
+				slabs[page].parts.clear(shift);
+				if (~slabs[page].parts) {
+					auto[first, last] = partial_slabs.equal_range(slabs[page].part_size);
+					for (auto it = first; it != last; it++)
+						if (it->second == page) {
+							partial_slabs.erase(it); break;
+						}
+					slabs[page].type = Additional::slab_type::free;
+				}
+			}
 		}
 		virtual Type* reallocate(Type *ptr, size_t const n) override {
-			return nullptr; 
+			auto ret = allocate(n);
+			auto page = (ptr - inner_memory) / slab_size;
+			size_t size = 0;
+			if (auto shift = (ptr - inner_memory) % slab_size / slabs[page].part_size;
+				shift == 0 && slabs[page].type == Additional::slab_type::whole) 
+			{
+				do size++; while (slabs[++page].type == Additional::slab_type::continuation);
+				size *= slab_size;
+			} else
+				size = slabs[page].part_size;
+			size = std::min(n, size);
+			std::move(ptr, ptr + size, ret);
+			deallocate(ptr);
+			return ret;
 		}
 	};
 }
