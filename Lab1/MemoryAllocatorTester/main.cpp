@@ -1,9 +1,9 @@
 #include "MemoryAllocatorTester.hpp"
-#include "../MemoryAllocator/MyAllocator.hpp"
+#include "../MemoryAllocator/MySlabAllocator.hpp"
 #include <QtWidgets/QApplication>
 int main(int argc, char *argv[]) {
 	QApplication a(argc, argv);
-	auto alloc = new MyAllocator::MyAllocator<1024 * 32>();
+	auto alloc = new MyAllocator::MySlabAllocator<1024 * 256>();
 	MemoryAllocatorTester w(alloc);
 	w.show();
 	return a.exec();

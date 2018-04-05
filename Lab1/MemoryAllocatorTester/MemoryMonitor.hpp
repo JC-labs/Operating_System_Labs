@@ -5,10 +5,10 @@
 class MemoryMonitor : public QOpenGLWidget, protected QOpenGLFunctions {
 	Q_OBJECT
 public:
-	MemoryMonitor(MyAllocator::AbstractAllocator<1024 * 32> *allocator, QWidget *parent = nullptr);
+	MemoryMonitor(MyAllocator::AbstractAllocator<1024 * 256> *allocator, QWidget *parent = nullptr);
 	~MemoryMonitor();
 protected:
-	MyAllocator::AbstractAllocator<1024 * 32> *m_allocator;
+	MyAllocator::AbstractAllocator<1024 * 256> *m_allocator;
 	size_t cells;
 	virtual void initializeGL() override;
 	virtual void resizeGL(int w, int h) override;

@@ -58,6 +58,7 @@ namespace MyAllocator {
 		using AbstractAllocator::AbstractAllocator;
 
 		virtual Type* allocate(size_t const n) override {
+			if (n == 0) return nullptr;
 			std::unique_lock<std::shared_mutex>(memory_mutex);
 			if (n > slab_size * 2) {
 				if (auto size = n / slab_size + (n % slab_size ? 1 : 0); size > 0) {
@@ -85,16 +86,17 @@ namespace MyAllocator {
 			throw Exceptions::allocation_is_not_possible();
 		}
 		virtual void deallocate(Type *ptr) override {
+			std::unique_lock<std::shared_mutex>(memory_mutex);
 			auto a = ptr - inner_memory;
 			auto page = (ptr - inner_memory) / slab_size;
-			auto shift = (ptr - inner_memory) % slab_size / slabs[page].part_size;
-			if (shift == 0 && slabs[page].state == Additional::slab_state::whole) 
+			if (slabs[page].state == Additional::slab_state::whole 
+				&& (ptr - inner_memory) % slab_size == 0)
 			{
 				do
 					slabs[page].state = Additional::slab_state::free;
 				while (slabs[++page].state == Additional::slab_state::continuation);
 			} else {
-				slabs[page].parts.clear(shift);
+				slabs[page].parts.clear((ptr - inner_memory) % slab_size / slabs[page].part_size);
 				if (~slabs[page].parts) {
 					auto[first, last] = partial_slabs.equal_range(slabs[page].part_size);
 					for (auto it = first; it != last; it++)
@@ -109,9 +111,10 @@ namespace MyAllocator {
 			auto ret = allocate(n);
 			auto page = (ptr - inner_memory) / slab_size;
 			size_t size = 0;
-			if (auto shift = (ptr - inner_memory) % slab_size / slabs[page].part_size;
-				shift == 0 && slabs[page].state == Additional::slab_state::whole) 
+			if (slabs[page].state == Additional::slab_state::whole 
+				&& (ptr - inner_memory) % slab_size == 0)
 			{
+				std::unique_lock<std::shared_mutex>(memory_mutex);
 				do size++; while (slabs[++page].state == Additional::slab_state::continuation);
 				size *= slab_size;
 			} else
@@ -122,11 +125,17 @@ namespace MyAllocator {
 			ptr = ret;
 			return ret;
 		}
-		virtual Additional::abstract_header** get_head() override {
-			
-		}
-		virtual void monitor(std::function<void(Additional::abstract_header const**, Additional::abstract_header const**)> monitor) override {
-
+		virtual void monitor(std::function<void(bool, size_t, size_t)> monitor) override {
+			std::shared_lock<std::shared_mutex>(memory_mutex);
+			for (size_t i = 0; i < memory_pool / slab_size; i++)
+				if (slabs[i].state == Additional::slab_state::partiated) {
+					size_t j = 0;
+					for (; j < slab_size / slabs[i].part_size; j++)
+						monitor(slabs[i].parts[j], i * slab_size + j * slab_size / slabs[i].part_size,
+								i * slab_size + (j + 1) * slab_size / slabs[i].part_size);
+					monitor(true, i * slab_size + j * slab_size / slabs[i].part_size, (i + 1) * slab_size);
+				} else
+					monitor(slabs[i].state == Additional::slab_state::free, i * slab_size, (i + 1) * slab_size);
 		}
 	};
 }

@@ -2,7 +2,7 @@
 #include "MemoryMonitor.hpp"
 #include <QPushButton>
 #include <QSpinBox>
-MemoryAllocatorTester::MemoryAllocatorTester(MyAllocator::AbstractAllocator<1024 * 32> *alloc, QWidget *parent) : QWidget(parent) {
+MemoryAllocatorTester::MemoryAllocatorTester(MyAllocator::AbstractAllocator<1024 * 256> *alloc, QWidget *parent) : QWidget(parent) {
 	ui.setupUi(this);
 	ui.monitor_layout->addWidget(new MemoryMonitor(m_allocator = alloc));
 
@@ -23,7 +23,7 @@ std::mt19937 g((std::random_device())());
 std::bernoulli_distribution b_d;
 void MemoryAllocatorTester::simulate() {
 	std::uniform_int_distribution<> u_d(0, ui.users->value() - 1);
-	std::uniform_int_distribution<> m_d(0, 1024 - 1);
+	std::uniform_int_distribution<> m_d(0, 8 * 1024 - 1);
 	try {
 		for (size_t i = 0; i < ui.steps->value(); i++) {
 			auto u = u_d(g);

@@ -1,5 +1,5 @@
 #include "MemoryMonitor.hpp"
-MemoryMonitor::MemoryMonitor(MyAllocator::AbstractAllocator<1024 * 32> *allocator, QWidget *parent)
+MemoryMonitor::MemoryMonitor(MyAllocator::AbstractAllocator<1024 * 256> *allocator, QWidget *parent)
 	: QOpenGLWidget(parent), m_allocator(allocator) {}
 MemoryMonitor::~MemoryMonitor() {}
 void MemoryMonitor::initializeGL() {
