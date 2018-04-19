@@ -37,13 +37,18 @@ void gui::calculate() {
 	auto ws_perc_series = new QtCharts::QSplineSeries();
 	double min_y_aw = std::numeric_limits<double>::max(), max_y_aw = std::numeric_limits<double>::min();
 	double min_y_wp = std::numeric_limits<double>::max(), max_y_wp = std::numeric_limits<double>::min();
-	for (size_t i = ui.interval_min->value(); i <= ui.interval_max->value(); i += ui.interval_step->value()) {
+	for (double i = ui.intensity_min->value(); i <= ui.intensity_max->value(); i *= ui.intensity_coeff->value()) {
 		auto time = std::make_shared<uint64_t>(0);
 		qs::FIFO_manager m(time);
 		size_t wasted = 0, sum_wait = 0, counter = 0;
 		size_t n = ui.tasks->value();
 		while (counter < n) {
-			if (*time % i == 0) m.add(std::make_shared<qs::AbstractTask>(pt_d(g)), pr_d(g));
+			if (double adds = i; adds >= 1) 
+				for (auto j = 0; j < size_t(adds); j++)	
+					m.add(std::make_shared<qs::AbstractTask>(pt_d(g)), pr_d(g));
+			else
+				if (*time % size_t(1.f / i) == 0)
+					m.add(std::make_shared<qs::AbstractTask>(pt_d(g)), pr_d(g));
 			if (m.empty())
 				wasted++;
 			else {
@@ -55,8 +60,8 @@ void gui::calculate() {
 			}
 			(*time)++;
 		}
-		series_append(av_wait_series, 1.f / i, double(sum_wait) / counter, min_y_aw, max_y_aw);
-		series_append(ws_perc_series, 1.f / i, double(wasted) / (*time), min_y_wp, max_y_wp);
+		series_append(av_wait_series, i, double(sum_wait) / counter, min_y_aw, max_y_aw);
+		series_append(ws_perc_series, i, double(wasted) / (*time), min_y_wp, max_y_wp);
 	}
 	av_wait_chart->addSeries(av_wait_series);
 	av_wait_chart->createDefaultAxes();

@@ -33,7 +33,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -63,6 +63,11 @@
          <layout class="QHBoxLayout" name="waste_percent_layout"/>
         </item>
        </layout>
+      </widget>
+      <widget class="QWidget" name="tab_3">
+       <attribute name="title">
+        <string>Page</string>
+       </attribute>
       </widget>
      </widget>
      <widget class="QWidget" name="widget" native="true">
@@ -209,7 +214,7 @@
          <item>
           <widget class="QLabel" name="label_9">
            <property name="text">
-            <string>Interval Range:</string>
+            <string>Intensity Range:</string>
            </property>
           </widget>
          </item>
@@ -236,15 +241,21 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="interval_min">
+            <widget class="QDoubleSpinBox" name="intensity_min">
+             <property name="decimals">
+              <number>3</number>
+             </property>
              <property name="minimum">
-              <number>1</number>
+              <double>0.001000000000000</double>
              </property>
              <property name="maximum">
-              <number>32767</number>
+              <double>1000.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.001000000000000</double>
              </property>
              <property name="value">
-              <number>1</number>
+              <double>0.010000000000000</double>
              </property>
             </widget>
            </item>
@@ -256,15 +267,21 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="interval_max">
+            <widget class="QDoubleSpinBox" name="intensity_max">
+             <property name="decimals">
+              <number>3</number>
+             </property>
              <property name="minimum">
-              <number>1</number>
+              <double>0.001000000000000</double>
              </property>
              <property name="maximum">
-              <number>32767</number>
+              <double>100.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.001000000000000</double>
              </property>
              <property name="value">
-              <number>100</number>
+              <double>100.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -276,15 +293,21 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="interval_step">
+            <widget class="QDoubleSpinBox" name="intensity_coeff">
+             <property name="decimals">
+              <number>3</number>
+             </property>
              <property name="minimum">
-              <number>1</number>
+              <double>1.001000000000000</double>
              </property>
              <property name="maximum">
-              <number>32767</number>
+              <double>100.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.001000000000000</double>
              </property>
              <property name="value">
-              <number>1</number>
+              <double>10.000000000000000</double>
              </property>
             </widget>
            </item>
