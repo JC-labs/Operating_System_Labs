@@ -10,6 +10,7 @@ public:
 private:
 	Ui::guiClass ui;
 	QtCharts::QChartView *av_wait;
+	QtCharts::QChartView *ws_perc;
 private slots:
 	void calculate();
 };

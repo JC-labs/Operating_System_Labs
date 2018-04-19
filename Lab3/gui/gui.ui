@@ -33,7 +33,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -46,7 +46,7 @@
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
-        <string>average wait</string>
+        <string>Average wait</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
@@ -56,8 +56,13 @@
       </widget>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
-        <string>Tab 2</string>
+        <string>Waste</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <layout class="QHBoxLayout" name="waste_percent_layout"/>
+        </item>
+       </layout>
       </widget>
      </widget>
      <widget class="QWidget" name="widget" native="true">
@@ -305,7 +310,7 @@
             <number>32767</number>
            </property>
            <property name="value">
-            <number>1000</number>
+            <number>100</number>
            </property>
           </widget>
          </item>

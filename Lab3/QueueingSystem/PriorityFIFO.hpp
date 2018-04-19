@@ -21,7 +21,12 @@ namespace qs {
 	public:
 		AbstractTask(types::time_period_t processing_time) 
 			: processing_time(processing_time), spent_time(0), 
-			generation_time(-1), start_time(-1), finished_time(-1) {}
+			generation_time(-1), start_time(-1), finished_time(-1) {
+		}
+		AbstractTask& operator++() { ++spent_time; return *this; }
+		AbstractTask& operator++(int) { spent_time++; return *this; }
+		bool operator!() { return spent_time >= processing_time; }
+		types::time_period_t wait_time() { return start_time - generation_time; }
 	};
 	class FIFO_manager {
 	protected:
@@ -41,9 +46,11 @@ namespace qs {
 		}
 		bool empty() { return queue.empty(); }
 		std::shared_ptr<AbstractTask> get_next() { 
-			queue.begin()->second.front()->start_time = *time_counter;
+			if (auto &t = queue.begin()->second.front()->start_time; t == -1)
+				t = *time_counter;
 			return queue.begin()->second.front(); 
 		}
+
 		std::shared_ptr<AbstractTask>  finish_next() {
 			auto it = queue.begin();
 			auto ret = it->second.front();
