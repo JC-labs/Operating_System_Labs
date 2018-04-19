@@ -11,6 +11,7 @@ private:
 	Ui::guiClass ui;
 	QtCharts::QChartView *av_wait;
 	QtCharts::QChartView *ws_perc;
+	QtCharts::QChartView *priority;
 private slots:
 	void calculate();
 };

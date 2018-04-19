@@ -33,7 +33,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -66,8 +66,13 @@
       </widget>
       <widget class="QWidget" name="tab_3">
        <attribute name="title">
-        <string>Page</string>
+        <string>Priority</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_7">
+        <item>
+         <layout class="QHBoxLayout" name="priority_layout"/>
+        </item>
+       </layout>
       </widget>
      </widget>
      <widget class="QWidget" name="widget" native="true">
@@ -137,6 +142,9 @@
             <widget class="QSpinBox" name="max_priority">
              <property name="maximum">
               <number>32767</number>
+             </property>
+             <property name="value">
+              <number>32</number>
              </property>
             </widget>
            </item>
@@ -249,7 +257,7 @@
               <double>0.001000000000000</double>
              </property>
              <property name="maximum">
-              <double>1000.000000000000000</double>
+              <double>100.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>0.001000000000000</double>
@@ -281,7 +289,7 @@
               <double>0.001000000000000</double>
              </property>
              <property name="value">
-              <double>100.000000000000000</double>
+              <double>25.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -307,7 +315,7 @@
               <double>0.001000000000000</double>
              </property>
              <property name="value">
-              <double>10.000000000000000</double>
+              <double>1.250000000000000</double>
              </property>
             </widget>
            </item>

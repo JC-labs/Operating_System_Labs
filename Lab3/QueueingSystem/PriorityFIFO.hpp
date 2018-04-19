@@ -50,7 +50,11 @@ namespace qs {
 				t = *time_counter;
 			return queue.begin()->second.front(); 
 		}
-
+		std::pair<types::priority_t, std::shared_ptr<AbstractTask>> get_next_pair() {
+			if (auto &t = queue.begin()->second.front()->start_time; t == -1)
+				t = *time_counter;
+			return std::make_pair(queue.begin()->first, queue.begin()->second.front());
+		}
 		std::shared_ptr<AbstractTask>  finish_next() {
 			auto it = queue.begin();
 			auto ret = it->second.front();
