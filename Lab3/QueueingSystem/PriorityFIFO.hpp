@@ -39,6 +39,7 @@ namespace qs {
 				queue.insert(std::make_pair(priority, 
 											std::list<std::shared_ptr<AbstractTask>>{task}));
 		}
+		bool empty() { return queue.empty(); }
 		std::shared_ptr<AbstractTask> get_next() { 
 			queue.begin()->second.front()->start_time = *time_counter;
 			return queue.begin()->second.front(); 
