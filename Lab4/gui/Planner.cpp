@@ -1,6 +1,7 @@
 #include "Planner.hpp"
 #include <qtablewidget.h>
 #include <random>
+Planner::Planner(int size) : m_matrix(new QTableWidget()) { resize(size); }
 Planner::Planner(QTableWidget *matrix) : m_matrix(matrix) { resize(matrix->rowCount()); }
 void Planner::restart(bool selection, bool colors) {
 	stage = 0; mask = 0;
@@ -29,8 +30,8 @@ void Planner::resize(int n) {
 		m_matrix->setVerticalHeaderItem(j, new QTableWidgetItem(QString::number(j)));
 	restart();
 }
+std::mt19937_64 g((std::random_device())());
 void Planner::randomize(float percent) {
-	std::mt19937_64 g((std::random_device())());
 	std::bernoulli_distribution d(percent);
 	for (int i = 0; i < m_matrix->rowCount(); i++) {
 		m_matrix->verticalHeaderItem(i)->setText(QString::number(i));

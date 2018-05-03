@@ -1,7 +1,7 @@
 #pragma once
 #include <QtWidgets/QWidget>
 #include "ui_gui.h"
-class Planner;
+class PlannerObject;
 class gui : public QWidget{	
 	Q_OBJECT
 public:
@@ -9,5 +9,5 @@ public:
 	~gui();
 private:
 	Ui::guiClass ui;
-	Planner *planner;
+	PlannerObject *planner;
 };

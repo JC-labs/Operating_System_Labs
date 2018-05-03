@@ -1,17 +1,15 @@
+#include "Planner.hpp"
+#include "Tester.hpp"
 #include "gui.hpp"
 #include <qspinbox.h>
-#include "Planner.hpp"
-gui::~gui() {
-	delete planner;
-}
 gui::gui(QWidget *parent) : QWidget(parent) {
 	ui.setupUi(this);
-	planner = new Planner(ui.matrix);
-	connect(ui.n, QOverload<int>::of(&QSpinBox::valueChanged), planner, &Planner::resize);
+	planner = new PlannerObject(ui.matrix);
+	connect(ui.n, QOverload<int>::of(&QSpinBox::valueChanged), planner, &PlannerObject::resize);
 	connect(ui.randomize, &QPushButton::clicked, this, [&]() { planner->randomize(ui.percent->value()); });
 	//connect(ui.matrix, &QTableWidget::itemSelectionChanged, planner, &Planner::restart);
-	connect(ui.step, &QPushButton::clicked, planner, &Planner::step);
-	connect(ui.finish, &QPushButton::clicked, planner, &Planner::finish);
+	connect(ui.step, &QPushButton::clicked, planner, &PlannerObject::step);
+	connect(ui.finish, &QPushButton::clicked, planner, &PlannerObject::finish);
 	connect(ui.matrix, &QTableWidget::itemDoubleClicked, this, [&](QTableWidgetItem *item) {
 		if (item->text() == " ")
 			item->setText("1");
@@ -21,6 +19,9 @@ gui::gui(QWidget *parent) : QWidget(parent) {
 	});
 	ui.n->setValue(15);
 	connect(ui.test, &QPushButton::clicked, this, [&]() {
-
+		new Tester(ui.from->value(), ui.to->value(), ui.percent->value());
 	});
+}
+gui::~gui() {
+	delete planner;
 }
