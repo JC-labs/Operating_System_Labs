@@ -7,6 +7,8 @@ class gui : public QWidget{
 public:
 	gui(QWidget *parent = Q_NULLPTR);
 	~gui();
+protected:
+	virtual void keyPressEvent(QKeyEvent *ev) override;
 private:
 	Ui::guiClass ui;
 	PlannerObject *planner;

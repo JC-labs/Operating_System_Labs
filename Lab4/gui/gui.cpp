@@ -21,7 +21,37 @@ gui::gui(QWidget *parent) : QWidget(parent) {
 	connect(ui.test, &QPushButton::clicked, this, [&]() {
 		new Tester(ui.from->value(), ui.to->value(), ui.percent->value());
 	});
+	connect(ui.key_lock, &QPushButton::clicked, this, [&](bool checked) {
+		if (checked)
+			grabKeyboard();
+		else
+			releaseKeyboard();
+	});
 }
 gui::~gui() {
 	delete planner;
+}
+#include <QKeyEvent>
+void gui::keyPressEvent(QKeyEvent *ev) {
+	switch (ev->key()) {
+		case Qt::Key_S:
+			planner->step();
+			ev->accept();
+			break;
+		case Qt::Key_R:
+			planner->randomize(ui.percent->value());
+			ev->accept();
+			break;
+		case Qt::Key_F:
+			planner->finish();
+			ev->accept();
+			break;
+		case Qt::Key_T:
+			new Tester(ui.from->value(), ui.to->value(), ui.percent->value());
+			ev->accept();
+			break;
+		default:
+			ev->ignore();
+			break;
+	}
 }

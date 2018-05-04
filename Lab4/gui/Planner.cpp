@@ -51,7 +51,7 @@ void Planner::step() {
 		switch (stage) {
 			case 0:
 			{
-				min_i = 0;
+				min_i = -1;
 				int min_v = std::numeric_limits<int>::max();
 				for (int i = mask; i < m_matrix->rowCount(); i++) {
 					int sum = 0;
@@ -67,13 +67,15 @@ void Planner::step() {
 			}
 			case 1:
 			{
-				QString t = m_matrix->verticalHeaderItem(min_i)->text();
-				m_matrix->verticalHeaderItem(min_i)->setText(m_matrix->verticalHeaderItem(mask)->text());
-				m_matrix->verticalHeaderItem(mask)->setText(t);
-				for (int j = mask; j < m_matrix->columnCount(); j++) {
-					t = m_matrix->item(min_i, j)->text();
-					m_matrix->item(min_i, j)->setText(m_matrix->item(mask, j)->text());
-					m_matrix->item(mask, j)->setText(t);
+				if (min_i != -1) {
+					QString t = m_matrix->verticalHeaderItem(min_i)->text();
+					m_matrix->verticalHeaderItem(min_i)->setText(m_matrix->verticalHeaderItem(mask)->text());
+					m_matrix->verticalHeaderItem(mask)->setText(t);
+					for (int j = 0; j < m_matrix->columnCount(); j++) {
+						t = m_matrix->item(min_i, j)->text();
+						m_matrix->item(min_i, j)->setText(m_matrix->item(mask, j)->text());
+						m_matrix->item(mask, j)->setText(t);
+					}
 				}
 				m_matrix->selectRow(mask);
 				stage++;
@@ -81,7 +83,7 @@ void Planner::step() {
 			}
 			case 2:
 			{
-				max_j = 0;
+				max_j = -1;
 				int max_v = 0;
 				for (int j = mask; j < m_matrix->columnCount(); j++)
 					if (m_matrix->item(mask, j)->text() == "1") {
@@ -98,13 +100,15 @@ void Planner::step() {
 			}
 			case 3:
 			{
-				QString t = m_matrix->horizontalHeaderItem(max_j)->text();
-				m_matrix->horizontalHeaderItem(max_j)->setText(m_matrix->horizontalHeaderItem(mask)->text());
-				m_matrix->horizontalHeaderItem(mask)->setText(t);
-				for (int i = mask; i < m_matrix->rowCount(); i++) {
-					t = m_matrix->item(i, max_j)->text();
-					m_matrix->item(i, max_j)->setText(m_matrix->item(i, mask)->text());
-					m_matrix->item(i, mask)->setText(t);
+				if (max_j != -1) {
+					QString t = m_matrix->horizontalHeaderItem(max_j)->text();
+					m_matrix->horizontalHeaderItem(max_j)->setText(m_matrix->horizontalHeaderItem(mask)->text());
+					m_matrix->horizontalHeaderItem(mask)->setText(t);
+					for (int i = 0; i < m_matrix->rowCount(); i++) {
+						t = m_matrix->item(i, max_j)->text();
+						m_matrix->item(i, max_j)->setText(m_matrix->item(i, mask)->text());
+						m_matrix->item(i, mask)->setText(t);
+					}
 				}
 				m_matrix->selectColumn(mask);
 				stage++;

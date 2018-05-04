@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>547</width>
-    <height>644</height>
+    <width>534</width>
+    <height>669</height>
    </rect>
   </property>
   <property name="font">
@@ -21,7 +21,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1,0,0">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,1,0,0,0">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1">
        <item>
@@ -184,6 +184,16 @@
         </widget>
        </item>
       </layout>
+     </item>
+     <item>
+      <widget class="QPushButton" name="key_lock">
+       <property name="text">
+        <string>Keyboard lock</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
