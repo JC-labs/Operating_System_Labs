@@ -1,6 +1,8 @@
 #include "Controller.hpp"
 #include <list>
 #include <random>
+#include <fstream>
+#include <iomanip>
 int test(size_t process_number, size_t working_set_size, size_t working_set_max_index, size_t iterations) {
 	static std::mt19937_64 g((std::random_device())());
 	std::bernoulli_distribution ws_d(.9);
@@ -15,15 +17,30 @@ int test(size_t process_number, size_t working_set_size, size_t working_set_max_
 		for (auto &process : processes)
 			if (ws_d(g))
 				if (rw_d(g))
-					process.working_set(pws_d(g)).read();
+					process.read_ws_page(pws_d(g));
 				else
-					process.working_set(pws_d(g)).modify();
+					process.modify_ws_page(pws_d(g));
 			else
 				if (rw_d(g))
-					process.page(p_d(g)).read();
+					process.read_page(p_d(g));
 				else
-					process.page(p_d(g)).modify();
+					process.modify_page(p_d(g));
 	}
+	std::ofstream f;
+	f.open("processes.txt");
+	size_t counter = 0;
+	for (auto &process : processes) {
+		f << "Process " << counter++ << '\n';
+		for (size_t i = 0; i < process->size(); i++)
+			f << "    " << i << "    " << process->at(i) << '\n';
+	}
+	f.close();
+	f.open("physical_memory.txt");
+	counter = 0;
+	for (size_t i = 0; i < VirtualMemoryController::pages().size(); i++)
+		f << std::hex << std::setw(8) << std::setfill('0') << i 
+			<< "    " << VirtualMemoryController::pages().at(i).first
+			<< "    " << VirtualMemoryController::pages().at(i).second << '\n';
 	return 0;
 }
 int main() {

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <exception>
+#include <ostream> 
 class VirtualPageHandle {
 public:
 	using AddressType = uint32_t;
@@ -29,44 +30,88 @@ public:
 		if (value & ~N_MASK) throw std::exception("Address is too big.");
 		m_address = (m_address & ~N_MASK) | value;
 	}
+	friend std::ostream& operator<<(std::ostream &s, VirtualPageHandle const& p);
 };
+template <typename unsigned_type = size_t>
+constexpr unsigned_type size_mask() {
+	constexpr unsigned_type ret = -1;
+	return ret ^ (ret >> 1);
+}
 #include <vector>
 #include <algorithm>
 class VirtualMemoryController {
-	static std::vector<VirtualPageHandle> m_pages;
+	static std::vector<std::pair<VirtualPageHandle, size_t>> m_pages;
+protected:
+	static auto page_fault() {
+		VirtualPageHandle::AddressType counter = 0u;
+		if (auto it = std::find_if(m_pages.begin(), m_pages.end(),
+								   [&counter](auto &h) { counter++; return !h.first.p(); }); it != m_pages.end()) {
+			it->first.p(true); it->first.n(counter - 1); return it;
+		}
+
+		VirtualPageHandle::AddressType min_i = 0u;
+		VirtualPageHandle *min_p = nullptr;
+		size_t min_v = std::numeric_limits<size_t>::max();
+		for (VirtualPageHandle::AddressType i = 0; i < m_pages.size(); i++)
+			if (auto t = m_pages.at(i); t.second < min_v) {
+				min_i = i;
+				min_p = &t.first;
+				if (min_v = t.second == 0) break;
+			}
+		if (min_p) {
+			swap_page(*min_p);
+			clear_page(m_pages[min_i].first, min_i);
+			m_pages.at(min_i).second = 0u;
+			return m_pages.begin() + min_i;
+		}
+		throw std::exception("There should be at least one physical page.");
+	}
+	static void maintain_clock();
+	static void access(std::pair<VirtualPageHandle, size_t> &page) {
+		maintain_clock();
+		page.second |= size_mask();
+	}
+	static void swap_page(VirtualPageHandle &page) {
+		//It's just a placeholder.
+	}
+	static void clear_page(VirtualPageHandle &page, VirtualPageHandle::AddressType address) {
+		page.n(address); page.p(true); page.r(false); page.m(false);
+	}
 public:
 	static void pages(size_t number) { m_pages.resize(number); }
-	static VirtualPageHandle page_fault() {
-		VirtualPageHandle::AddressType counter = 0u;
-		if (auto it = std::find_if(m_pages.begin(), m_pages.end(), 
-								   [&counter](auto &h) { counter++; return !h.p(); }); it != m_pages.end()) {
-			it->p(true); it->n(counter); return *it;
-		}
-		throw std::exception("Empty page wasn't found.");
-		//To be extended.
+	static void read_page(VirtualPageHandle &page) {
+		if (page.p())
+			if (auto address = page.n(); address < m_pages.size())
+				if (m_pages.at(address).first.p())
+					if (m_pages.at(address).first.r())
+						return access(m_pages.at(address));
+					else if (m_pages.at(address).first.m()) {
+						m_pages.at(address).first.m(true); page.m(true);
+						return access(m_pages.at(address));
+					}
+		auto &temp = page_fault()->first;
+		temp.r(true);
+		page = temp;
 	}
-};
-class VirtualPage : protected VirtualPageHandle {
-protected:
-	using VirtualPageHandle::operator=;
-	void page_fault() { operator=(VirtualMemoryController::page_fault()); }
-public:
-	void read() {
-		if (p() && r()) return;
-		if (p() && m()) return r(true);
-		page_fault();
-		return r(true);
+	static void modify_page(VirtualPageHandle &page) {
+		if (page.p())
+			if (auto address = page.n(); address < m_pages.size())
+				if (m_pages.at(address).first.p())
+					if (m_pages.at(address).first.m())
+						return access(m_pages.at(address));
+					else if (m_pages.at(address).first.r()) {
+						m_pages.at(address).first.r(true); page.r(true);
+						return access(m_pages.at(address));
+					}
+		auto &temp = page_fault()->first;
+		temp.m(true);
+		page = temp;
 	}
-	void modify() {
-		if (p() && m()) return;
-		if (p() && r()) return m(true);
-		page_fault();
-		return m(true);
-	}
+	static auto const& pages() { return m_pages; }
 };
 class Process {
 	using IndexType = uint16_t;
-	std::vector<VirtualPage> m_table;
+	std::vector<VirtualPageHandle> m_table;
 	std::vector<IndexType> m_working_set;
 public:
 	Process() {}
@@ -76,10 +121,18 @@ public:
 			IndexType right = std::numeric_limits<IndexType>::max()) { 
 		generate_working_set(number, left, right); 
 	}
-	inline VirtualPage& page(IndexType index) { 
+	inline VirtualPageHandle& page(IndexType index) {
 		if (index >= m_table.size())
 			m_table.resize(index + 1);
 		return m_table.at(index); 
 	}
-	inline VirtualPage& working_set(IndexType index) { return page(m_working_set.at(index)); }
+	inline VirtualPageHandle& working_set(IndexType index) { return page(m_working_set.at(index)); }
+
+	inline void read_page(IndexType index) { return VirtualMemoryController::read_page(page(index)); }
+	inline void modify_page(IndexType index) { return VirtualMemoryController::modify_page(page(index)); }
+	inline void read_ws_page(IndexType index) { return VirtualMemoryController::read_page(working_set(index)); }
+	inline void modify_ws_page(IndexType index) { return VirtualMemoryController::modify_page(working_set(index)); }
+
+	inline auto const& operator*() const { return m_table; }
+	inline auto const* operator->() const { return &m_table; }
 };
