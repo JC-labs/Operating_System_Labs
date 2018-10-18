@@ -12,7 +12,7 @@ enum class Filetype {
 	file = 1,
 	dir = 2
 };
-inline uint8_t operator*(Filetype t) { return uint8_t(t); }
+inline constexpr uint8_t operator*(Filetype t) { return uint8_t(t); }
 
 using Address = uint32_t;
 
@@ -25,7 +25,7 @@ public:
 	const Address m_root_directory = 0u;
 protected:
 	void state_check() {
-		if (!m_storage)
+		if (m_storage.fail())
 			throw std::exception("Unable to access filesystem. Make sure it was mounted.");
 	}
 	Address claim_free_block() {
@@ -63,19 +63,63 @@ protected:
 	Address find_free_dir_pos(Address const& dir) {
 		state_check();
 
+		char type;
 		m_storage.seekg(dir * block_size + 8);
-		while (m_storage.get()) {
+		while (type = m_storage.get()) {
 			while (m_storage.get() != '\0');
 			Address size, temp;
 			read_f(m_storage, size);
-			while (size--)
-				read_f(m_storage, temp);
+			if (type == *Filetype::file) {
+				while (size--)
+					read_f(m_storage, temp);
+			} else if (type == *Filetype::dir) {
+
+			} else
+				throw std::exception("Unsupported or broken file.");
 		}
 
 		return Address(m_storage.tellg());
 	}
-	Address find_dir_pos(Address const& dir, std::string const& name) {
+	Address find_dir_pos(std::string const& path, Address const& dir) {
+		state_check();
+		if (path.empty())
+			throw std::exception("Folder or file name is expected.");
 
+		std::istringstream s(path);
+		std::string temp;
+
+		std::getline(s, temp, '/');
+
+		if (temp.empty())
+			throw std::exception("Empty folder name wasn't expected");
+
+		char type;
+		m_storage.seekg(dir * block_size + 8);
+		while (type = m_storage.get()) {
+			std::string ttemp;
+			std::getline(m_storage, ttemp, '\0');
+			if (temp == ttemp)
+				if (path.size() == temp.size())
+					return Address(m_storage.tellg()) - Address(ttemp.size()) - 1;
+				else
+					if (type == *Filetype::dir) {
+						Address next_dir;
+						read_f(m_storage, next_dir);
+						return find_dir_pos(path.substr(temp.size()), next_dir);
+					} else
+						throw std::exception("Unsupported or broken file.");
+			Address size, tmp;
+			read_f(m_storage, size);
+			if (type == *Filetype::file) {
+				while (size--)
+					read_f(m_storage, tmp);
+			} else if (type == *Filetype::dir) {
+
+			} else
+				throw std::exception("Unsupported or broken file.");
+		}
+		
+		throw std::exception("No such file or directory.");
 	}
 public:
 	explicit Filesystem() : m_current_directory(m_root_directory) {
@@ -171,5 +215,16 @@ public:
 			temp = addr / block_size;
 		}
 		return ret.empty() ? "/" : ret;
+	}
+	void cd(std::string const& path) {
+		if (path.empty())
+			throw std::exception("Empty path wasn't expected");
+		if (path.front() == '/')
+			if (path.size() == 1)
+				m_current_directory = m_root_directory;
+			else
+				m_current_directory = find_dir_pos(path.substr(1), m_root_directory);
+		else
+			m_current_directory = find_dir_pos(path, m_current_directory);
 	}
 };

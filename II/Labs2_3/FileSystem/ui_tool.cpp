@@ -36,6 +36,10 @@ int process() {
 			filesystem.mkdir(string);
 		} else if (string == "pwd") {
 			std::cout << filesystem.pwd() << '\n';
+		} else if (string == "cd") {
+			if (!stream) throw std::exception("Folder path is expected.");
+			std::getline(stream, string);
+			filesystem.cd(string.substr(1));
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";
