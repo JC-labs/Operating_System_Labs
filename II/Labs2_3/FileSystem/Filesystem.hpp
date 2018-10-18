@@ -203,18 +203,27 @@ public:
 		std::string ret = "";
 		Address temp = m_current_directory;
 		while (temp != 0) {
-			m_storage.seekg(temp * block_size + 1);
+			m_storage.seekg(temp - 1);
+			char type;
+			m_storage >> type;
+			if (type != *Filetype::dir)
+				throw std::exception("Only folder names are supported in paths.");
+			while (m_storage.get() != '\0');
 			Address addr;
+			read_f(m_storage, addr);
+			m_storage.seekg(addr * block_size);
 			read_f(m_storage, addr);
 			m_storage.seekg(addr);
 			std::string tmp;
 			char b;
-			while (m_storage >> b)
+			do {
+				m_storage >> b;
 				tmp += b;
-			ret = tmp + '/' + ret;
+			} while (b);
+			ret = tmp.substr(0, tmp.size() - 1) + '/' + ret;
 			temp = addr / block_size;
 		}
-		return ret.empty() ? "/" : ret;
+		return "/" + ret;
 	}
 	void cd(std::string const& path) {
 		if (path.empty())
