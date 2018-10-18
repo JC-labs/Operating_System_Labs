@@ -416,9 +416,9 @@ public:
 				  std::ostream_iterator<char>(m_storage, ""));
 
 		//Change size (claim or release blocks).
-		for (Address i = 0; i < new_size - old_size; i++)
+		for (int32_t i = 0; i < int32_t(new_size) - int32_t(old_size); i++)
 			blocks.push_back(claim_free_block());
-		for (Address i = 0; i < old_size - new_size; i++) {
+		for (int32_t i = 0; i < int32_t(old_size) - int32_t(new_size); i++) {
 			auto tmp = blocks.back();
 			blocks.pop_back();
 			mark_block_empty(tmp);
