@@ -31,7 +31,7 @@ protected:
 	Address claim_free_block() {
 		state_check();
 
-		m_storage.seekg(1 + 4 + 4 + 1);
+		m_storage.seekg(4 + 4 + 1);
 		char buffer[7];
 		m_storage.read(buffer, 7);
 		if (std::string(buffer) != "Bitset")
@@ -72,7 +72,7 @@ public:
 		if (!tf)
 			throw std::exception("Storage is inaccessible.");
 		
-		tf << *Filetype::dir; //root_dir type
+		//tf << *Filetype::dir; //root_dir type
 
 		Address bff = 0;
 		write_f(tf, bff); //root_dir's '..'
@@ -113,11 +113,29 @@ public:
 	void create(std::string const& name) {
 		state_check();
 
+		m_storage.seekg(m_current_directory * block_size + 8);
+		while (m_storage.get()) {
+			while (m_storage.get() != '\0');
+			Address size, temp;
+			read_f(m_storage, size);
+			while (size--)
+				read_f(m_storage, temp);
+		}
+
+		auto pos = Address(m_storage.tellg());
+		auto addr = claim_free_block();
+		Address size = 1;
+
+		m_storage.seekp(pos);
+		m_storage.seekp(-1, std::fstream::cur);
+		m_storage << *Filetype::file << name << '\0';
+		write_f(m_storage, size);
+		write_f(m_storage, addr);
 	}
 	void mkdir(std::string const& name) {
 		state_check();
 		
-		m_storage.seekg(m_current_directory * block_size + 9);
+		m_storage.seekg(m_current_directory * block_size + 8);
 		while (m_storage.get()) {
 			while (m_storage.get() != '\0');
 			Address size, temp;
@@ -129,7 +147,7 @@ public:
 		auto pos = Address(m_storage.tellg());
 		auto addr = claim_free_block();
 		m_storage.seekp(addr * block_size);
-		m_storage << *Filetype::dir; //dir type
+		//m_storage << *Filetype::dir; //dir type
 		write_f(m_storage, pos); //dir's '..'
 		write_f(m_storage, addr); //dir's '.'
 		m_storage << '\0';
