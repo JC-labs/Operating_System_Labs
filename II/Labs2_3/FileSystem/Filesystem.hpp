@@ -14,7 +14,8 @@ enum class Filetype {
 	empty = 0,
 	file = 1,
 	dir = 2,
-	link = 3
+	link = 3,
+	symlink = 4
 };
 inline constexpr uint8_t operator*(Filetype t) { return uint8_t(t); }
 
@@ -117,7 +118,8 @@ protected:
 				while (size--)
 					read_f(m_storage, temp);
 			} else if (type == *Filetype::dir) {
-
+			} else if (type == *Filetype::link) {
+			} else if (type == *Filetype::symlink) {
 			} else
 				throw std::exception("Unsupported or broken file.");
 		}
@@ -582,5 +584,24 @@ public:
 		m_storage.seekp(pos - 1);
 		std::copy(begin_iterator, end_iterator,
 				  std::ostream_iterator<char>(m_storage, ""));
+	}
+	void symlink(std::string const& linkname, std::string const& filename) {
+		state_check();
+
+		auto file = find(filename);
+		m_storage.seekg(file - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::file)
+			throw std::exception("Filename is expected.");
+
+		auto pos = find_free_dir_pos(m_current_directory);
+		auto addr = claim_free_block();
+		Address size = 1;
+
+		m_storage.seekp(pos);
+		m_storage.seekp(-1, std::fstream::cur);
+		m_storage << *Filetype::symlink << linkname << '\0';
+		write_f(m_storage, file -= 1);
 	}
 };

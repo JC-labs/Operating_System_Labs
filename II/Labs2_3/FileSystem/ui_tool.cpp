@@ -101,6 +101,13 @@ int process() {
 			if (!stream) throw std::exception("Link name is expected.");
 			stream >> string;
 			filesystem.unlink(string);
+		} else if (string == "symlink") {
+			std::string file;
+			if (!stream) throw std::exception("Link name is expected.");
+			stream >> string;
+			if (!stream) throw std::exception("Filename is expected.");
+			stream >> file;
+			filesystem.symlink(string, file);
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";
