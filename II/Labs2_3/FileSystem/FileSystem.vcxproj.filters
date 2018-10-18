@@ -4,7 +4,6 @@
     <ClInclude Include="Filesystem.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Filesystem.cpp" />
     <ClCompile Include="ui_tool.cpp" />
   </ItemGroup>
 </Project>
