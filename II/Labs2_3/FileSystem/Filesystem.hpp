@@ -316,11 +316,13 @@ public:
 	}
 	void cd(std::string const& path) {
 		m_current_directory = find(path);
-		m_storage.seekg(m_current_directory - 1);
-		char type;
-		m_storage >> type;
-		if (type != *Filetype::dir)
-			throw std::exception("Folder name is expected.");
+		if (m_current_directory) {
+			m_storage.seekg(m_current_directory - 1);
+			char type;
+			m_storage >> type;
+			if (type != *Filetype::dir)
+				throw std::exception("Folder name is expected.");
+		}
 	}
 	void ls(std::ostream &s) {
 		state_check();
