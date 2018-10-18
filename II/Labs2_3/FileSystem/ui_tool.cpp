@@ -61,8 +61,35 @@ int process() {
 			if (!stream) throw std::exception("Filename is expected.");
 			stream >> string;
 			files.insert(std::pair(counter++, filesystem.open(string)));
-			std::cout << "File '" << files.at(counter - 1).name 
+			std::cout << "File '" << files.at(counter - 1).name
 				<< "' was opened with fd: " << counter - 1 << '\n';
+		} else if (string == "close") {
+			if (!stream) throw std::exception("fd is expected.");
+			stream >> size;
+			files.erase(size);
+		} else if (string == "read") {
+			Address offset, index;
+			if (!stream) throw std::exception("fd is expected.");
+			stream >> index;
+			if (!stream) throw std::exception("offset is expected.");
+			stream >> offset;
+			if (!stream) throw std::exception("size is expected.");
+			stream >> size;
+			if (files.find(index) == files.end()) 
+				throw std::exception("File with the fd is not open.");
+			std::cout << "  Content:\n" <<
+				filesystem.read(files.at(index), offset, Address(size));
+		} else if (string == "write") {
+			Address offset, index;
+			if (!stream) throw std::exception("fd is expected.");
+			stream >> index;
+			if (!stream) throw std::exception("offset is expected.");
+			stream >> offset;
+			if (!stream) throw std::exception("size is expected.");
+			stream >> size;
+			if (files.find(index) == files.end())
+				throw std::exception("File with the fd is not open.");
+			filesystem.write(files.at(index), offset, Address(size));
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";

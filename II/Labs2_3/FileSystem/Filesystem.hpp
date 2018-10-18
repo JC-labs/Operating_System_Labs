@@ -465,4 +465,78 @@ public:
 
 		return ret;
 	}
+	std::string read(OpenedFile<> const& file, 
+					 Address const& offset, Address const& size) {
+		if (offset + size > file.blocks.size() * block_size)
+			throw std::exception("Error : cannot read outside of file.");
+		
+		char *buffer;
+		std::string ret;
+		int32_t first_page = offset / block_size,
+			last_page = (offset + size) / block_size;
+
+		if (first_page == last_page) {
+			buffer = new char[size];
+			m_storage.seekg(file.blocks.at(first_page) * block_size + offset);
+			m_storage.read(buffer, size);
+			ret = buffer;
+			delete buffer;
+		} else {
+			buffer = new char[block_size - offset % block_size];
+			m_storage.seekg(file.blocks.at(first_page) * block_size + offset);
+			m_storage.read(buffer, block_size - offset % block_size);
+			ret += buffer;
+			delete buffer;
+
+			buffer = new char[block_size];
+			for (auto page = first_page + 1; page <= last_page - 1; page++) {
+				m_storage.seekg(file.blocks.at(page) * block_size);
+				m_storage.read(buffer, block_size);
+				ret += buffer;
+			}
+			delete buffer;
+
+			buffer = new char[block_size - (offset + size) % block_size];
+			m_storage.seekg(file.blocks.at(last_page) * block_size);
+			m_storage.read(buffer, block_size - (offset + size) % block_size);
+			ret += buffer;
+			delete buffer;
+		}
+
+		return ret;
+	}
+	void write(OpenedFile<> const& file, Address const& offset, 
+						  Address const& size, std::string data = "") {
+		if (offset + size > file.blocks.size() * block_size)
+			throw std::exception("Error : cannot write outside of file.");
+		if (data.empty())
+			data.resize(size);
+		if (data.size() != size)
+			throw std::exception("Size of 'data' is expected to be equal to the 'size'.");
+
+		const char *buffer;
+		int32_t first_page = offset / block_size,
+			last_page = (offset + size) / block_size;
+
+		if (first_page == last_page) {
+			buffer = data.c_str();
+			m_storage.seekp(file.blocks.at(first_page) * block_size + offset);
+			m_storage.write(buffer, size);
+		} else {
+			buffer = data.substr(0, block_size - offset % block_size).c_str();
+			m_storage.seekp(file.blocks.at(first_page) * block_size + offset);
+			m_storage.write(buffer, block_size - offset % block_size);
+
+			for (auto page = first_page + 1; page <= last_page - 1; page++) {
+				buffer = data.substr(block_size - offset % block_size + page * block_size,
+									 block_size - offset % block_size + (page + 1) * block_size).c_str();
+				m_storage.seekp(file.blocks.at(page) * block_size);
+				m_storage.write(buffer, block_size);
+			}
+
+			buffer = data.substr(0, data.size() - block_size + (offset + size) % block_size).c_str();
+			m_storage.seekp(file.blocks.at(last_page) * block_size);
+			m_storage.write(buffer, block_size - (offset + size) % block_size);
+		}
+	}
 };
