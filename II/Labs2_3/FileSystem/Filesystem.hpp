@@ -153,6 +153,19 @@ protected:
 		
 		throw std::exception("No such file or directory.");
 	}
+	Address find(std::string const& path) {
+		state_check();
+
+		if (path.empty())
+			throw std::exception("Empty path wasn't expected");
+		if (path.front() == '/')
+			if (path.size() == 1)
+				return m_root_directory;
+			else
+				return find_dir_pos(path.substr(1), m_root_directory);
+		else
+			return find_dir_pos(path, m_current_directory);
+	}
 public:
 	explicit Filesystem() : m_current_directory(m_root_directory) {
 		static_assert(block_size > 16);
@@ -197,9 +210,26 @@ public:
 		state_check();
 		m_storage.close();
 	}
-	void filestat(size_t) {
+	void filestat(std::string const& name, std::ostream &s) {
 		state_check();
-		throw std::exception("Unimplemented feature");
+
+		auto pos = find(name);
+		m_storage.seekg(pos - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::file)
+			throw std::exception("Filename is expected.");
+
+		std::string temp;
+		std::getline(m_storage, temp, '\0');
+		Address size, ttemp;
+		read_f(m_storage, size);
+		s << temp << '\t' << size << ": ";
+		while (size--) {
+			read_f(m_storage, ttemp);
+			s << ttemp << ' ';
+		}
+		s << '\n';
 	}
 	void create(std::string const& name) {
 		state_check();
@@ -258,17 +288,12 @@ public:
 		return "/" + ret;
 	}
 	void cd(std::string const& path) {
-		state_check();
-
-		if (path.empty())
-			throw std::exception("Empty path wasn't expected");
-		if (path.front() == '/')
-			if (path.size() == 1)
-				m_current_directory = m_root_directory;
-			else
-				m_current_directory = find_dir_pos(path.substr(1), m_root_directory);
-		else
-			m_current_directory = find_dir_pos(path, m_current_directory);
+		m_current_directory = find(path);
+		m_storage.seekg(m_current_directory - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::dir)
+			throw std::exception("Folder name is expected.");
 	}
 	void ls(std::ostream &s) {
 		state_check();

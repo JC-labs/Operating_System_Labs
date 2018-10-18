@@ -23,9 +23,9 @@ int process() {
 		} else if (string == "unmount") {
 			filesystem.unmount();
 		} else if (string == "filestat") {
-			//if (!stream) throw std::exception("File name is expected.");
-			//stream >> size;
-			//filesystem.filestat(size);
+			if (!stream) throw std::exception("File name is expected.");
+			stream >> string;
+			filesystem.filestat(string, std::cout);
 		} else if (string == "create") {
 			if (!stream) throw std::exception("File name is expected.");
 			stream >> string;
