@@ -3,6 +3,7 @@
 #include <fstream>
 #include <bitset>
 #include <vector>
+#include <iomanip>
 
 #define write_f(f, v) f.write(reinterpret_cast<const char *>(&v), sizeof(v));
 #define read_f(f, v) f.read(reinterpret_cast<char *>(&v), sizeof(v));
@@ -257,6 +258,8 @@ public:
 		return "/" + ret;
 	}
 	void cd(std::string const& path) {
+		state_check();
+
 		if (path.empty())
 			throw std::exception("Empty path wasn't expected");
 		if (path.front() == '/')
@@ -266,5 +269,39 @@ public:
 				m_current_directory = find_dir_pos(path.substr(1), m_root_directory);
 		else
 			m_current_directory = find_dir_pos(path, m_current_directory);
+	}
+	void ls(std::ostream &s) {
+		state_check();
+
+		Address tmp;
+		std::string temp;
+		if (m_current_directory) {
+			m_storage.seekg(m_current_directory);
+			std::getline(m_storage, temp, '\0');
+			s << "  " << temp << "/:\n";
+			read_f(m_storage, tmp);
+		} else {
+			tmp = m_current_directory;
+			s << "  /:\n";
+		}
+
+		char type;
+		m_storage.seekg(tmp * block_size + 8);
+		while (type = m_storage.get()) {
+			std::getline(m_storage, temp, '\0');
+			Address size, ttemp;
+			read_f(m_storage, size);
+			if (type == *Filetype::file) {
+				s << "    F: " << temp << std::setw(10 - temp.size()) << '\t' << size << ": ";
+				while (size--) {
+					read_f(m_storage, ttemp);
+					s << ttemp << ' ';
+				}
+				s << '\n';
+			} else if (type == *Filetype::dir) {
+				s << "    D: " << temp << std::setw(10 - temp.size()) << '\t' << size << "\n";
+			} else
+				throw std::exception("Unsupported or broken file.");
+		}
 	}
 };

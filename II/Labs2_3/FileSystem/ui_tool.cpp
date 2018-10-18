@@ -40,6 +40,8 @@ int process() {
 			if (!stream) throw std::exception("Folder path is expected.");
 			std::getline(stream, string);
 			filesystem.cd(string.substr(1));
+		} else if (string == "ls") {
+			filesystem.ls(std::cout);
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";
