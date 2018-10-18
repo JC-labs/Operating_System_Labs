@@ -1,11 +1,15 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <map>
 #include "Filesystem.hpp"
 int process() {
 	Filesystem<> filesystem;
 	std::string string;
 	size_t size;
+
+	std::map<size_t, OpenedFile<>> files;
+	static size_t counter = 0;
 
 	std::cout << ": ";
 	while (std::getline(std::cin, string)) {
@@ -53,6 +57,12 @@ int process() {
 			if (!stream) throw std::exception("New file size is expected.");
 			stream >> size;
 			filesystem.truncate(string, size);
+		} else if (string == "open") {
+			if (!stream) throw std::exception("Filename is expected.");
+			stream >> string;
+			files.insert(std::pair(counter++, filesystem.open(string)));
+			std::cout << "File '" << files.at(counter - 1).name 
+				<< "' was opened with fd: " << counter - 1 << '\n';
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";

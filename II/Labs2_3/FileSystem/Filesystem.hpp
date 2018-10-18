@@ -19,6 +19,13 @@ inline constexpr uint8_t operator*(Filetype t) { return uint8_t(t); }
 
 using Address = uint32_t;
 
+template<size_t block_size = 4096u, size_t block_number = 1024u>
+struct OpenedFile {
+	std::string name;
+	std::vector<Address> blocks;
+	Address descriptor;
+};
+
 template <size_t block_size = 4096u, size_t block_number = 1024u>
 class Filesystem {
 	std::fstream m_storage;
@@ -426,7 +433,7 @@ public:
 
 		//Create new descriptor.
 		pos = find_free_dir_pos(m_current_directory);
-		Address size = blocks.size();
+		Address size = Address(blocks.size());
 
 		m_storage.seekp(pos);
 		m_storage.seekp(-1, std::fstream::cur);
@@ -434,5 +441,28 @@ public:
 		write_f(m_storage, size);
 		for (auto it : blocks)
 			write_f(m_storage, it);
+	}
+	OpenedFile<> open(std::string const& name) {
+		state_check();
+
+		OpenedFile<> ret;
+
+		auto pos = find(name);
+		m_storage.seekg(pos - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::file)
+			throw std::exception("Filename is expected.");
+		ret.descriptor = pos - 1;
+
+		std::getline(m_storage, ret.name, '\0');
+		Address size, temp;
+		read_f(m_storage, size);
+		while (size--) {
+			read_f(m_storage, temp);
+			ret.blocks.push_back(temp);
+		}
+
+		return ret;
 	}
 };
