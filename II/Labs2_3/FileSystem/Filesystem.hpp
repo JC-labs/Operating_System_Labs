@@ -63,8 +63,16 @@ protected:
 	Address find_free_dir_pos(Address const& dir) {
 		state_check();
 
+		Address tmp;
+		if (dir) {
+			m_storage.seekg(dir + 1);
+			while (m_storage.get() != '\0');
+			read_f(m_storage, tmp);
+		} else
+			tmp = dir;
+
 		char type;
-		m_storage.seekg(dir * block_size + 8);
+		m_storage.seekg(tmp * block_size + 8);
 		while (type = m_storage.get()) {
 			while (m_storage.get() != '\0');
 			Address size, temp;
@@ -105,7 +113,9 @@ protected:
 					if (type == *Filetype::dir) {
 						Address next_dir;
 						read_f(m_storage, next_dir);
-						return find_dir_pos(path.substr(temp.size()), next_dir);
+						m_storage.seekg(next_dir * block_size);
+						read_f(m_storage, next_dir);
+						return find_dir_pos(path.substr(temp.size() + 1), next_dir);
 					} else
 						throw std::exception("Unsupported or broken file.");
 			Address size, tmp;
