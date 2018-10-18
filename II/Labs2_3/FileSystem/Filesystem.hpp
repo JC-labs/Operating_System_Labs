@@ -7,13 +7,14 @@
 #include <algorithm>
 #include <iterator>
 
-#define write_f(f, v) f.write(reinterpret_cast<const char *>(&v), sizeof(v));
-#define read_f(f, v) f.read(reinterpret_cast<char *>(&v), sizeof(v));
+#define write_f(f, v) f.write(reinterpret_cast<const char *>(&(v)), sizeof(v));
+#define read_f(f, v) f.read(reinterpret_cast<char *>(&(v)), sizeof(v));
 
 enum class Filetype {
 	empty = 0,
 	file = 1,
-	dir = 2
+	dir = 2,
+	link = 3
 };
 inline constexpr uint8_t operator*(Filetype t) { return uint8_t(t); }
 
@@ -467,6 +468,8 @@ public:
 	}
 	std::string read(OpenedFile<> const& file, 
 					 Address const& offset, Address const& size) {
+		state_check();
+
 		if (offset + size > file.blocks.size() * block_size)
 			throw std::exception("Error : cannot read outside of file.");
 		
@@ -507,6 +510,8 @@ public:
 	}
 	void write(OpenedFile<> const& file, Address const& offset, 
 						  Address const& size, std::string data = "") {
+		state_check();
+
 		if (offset + size > file.blocks.size() * block_size)
 			throw std::exception("Error : cannot write outside of file.");
 		if (data.empty())
@@ -538,5 +543,44 @@ public:
 			m_storage.seekp(file.blocks.at(last_page) * block_size);
 			m_storage.write(buffer, block_size - (offset + size) % block_size);
 		}
+	}
+	void link(std::string const& linkname, std::string const& filename) {
+		state_check();
+
+		auto file = find(filename);
+		m_storage.seekg(file - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::file)
+			throw std::exception("Filename is expected.");
+
+		auto pos = find_free_dir_pos(m_current_directory);
+		auto addr = claim_free_block();
+		Address size = 1;
+
+		m_storage.seekp(pos);
+		m_storage.seekp(-1, std::fstream::cur);
+		m_storage << *Filetype::link << linkname << '\0';
+		write_f(m_storage, file -= 1);
+	}
+	void unlink(std::string const& linkname) {
+		state_check();
+
+		auto pos = find(linkname);
+		m_storage.seekg(pos - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::link)
+			throw std::exception("Linkname is expected.");
+
+		auto begin_pos = m_storage.tellg();
+		auto begin_iterator = std::istream_iterator<char>(m_storage);
+		auto end_pos = find_free_dir_pos(m_current_directory);
+		m_storage.seekg(end_pos + 1);
+		auto end_iterator = std::istream_iterator<char>(m_storage);
+
+		m_storage.seekp(pos - 1);
+		std::copy(begin_iterator, end_iterator,
+				  std::ostream_iterator<char>(m_storage, ""));
 	}
 };

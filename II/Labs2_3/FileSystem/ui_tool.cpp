@@ -90,6 +90,17 @@ int process() {
 			if (files.find(index) == files.end())
 				throw std::exception("File with the fd is not open.");
 			filesystem.write(files.at(index), offset, Address(size));
+		} else if (string == "link") {
+			std::string file;
+			if (!stream) throw std::exception("Link name is expected.");
+			stream >> string;
+			if (!stream) throw std::exception("Filename is expected.");
+			stream >> file;
+			filesystem.link(string, file);
+		} else if (string == "unlink") {
+			if (!stream) throw std::exception("Link name is expected.");
+			stream >> string;
+			filesystem.unlink(string);
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";
