@@ -4,6 +4,8 @@
 #include <bitset>
 #include <vector>
 #include <iomanip>
+#include <algorithm>
+#include <iterator>
 
 #define write_f(f, v) f.write(reinterpret_cast<const char *>(&v), sizeof(v));
 #define read_f(f, v) f.read(reinterpret_cast<char *>(&v), sizeof(v));
@@ -60,6 +62,31 @@ protected:
 			}
 		}
 		throw std::exception("All of the blocks are occupied. It's impossible to allocate memory.");
+	}
+	void mark_block_empty(Address const& addr) {
+		state_check();
+
+		m_storage.seekg(4 + 4 + 1);
+		char buffer[7];
+		m_storage.read(buffer, 7);
+		if (std::string(buffer) != "Bitset")
+			throw std::exception("'/Bitset' file is corrupted. Unable to restore filesystem.");
+
+		Address size;
+		read_f(m_storage, size);
+		Address current;
+		for (Address i = 0; i <= addr / block_size / 8; i++)
+			read_f(m_storage, current);
+
+		char b;
+		m_storage.seekg(current * block_size + addr % block_size / 8);
+		b = m_storage.peek();
+		if (auto t = 1 << (addr % 8); b & t) {
+			b &= ~t;
+			m_storage.seekp(m_storage.tellg());
+			m_storage.put(b);
+		} else
+			throw std::exception("Block is already empty. System may have been corrupted.");
 	}
 	Address find_free_dir_pos(Address const& dir) {
 		state_check();
@@ -328,5 +355,31 @@ public:
 			} else
 				throw std::exception("Unsupported or broken file.");
 		}
+	}
+	void rmdir(std::string const& name) {
+		state_check();
+
+		auto pos = find(name);
+		m_storage.seekg(pos - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::dir)
+			throw std::exception("Folder name is expected.");
+
+		while (m_storage.get() != '\0');
+		Address folder_block;
+		read_f(m_storage, folder_block);
+
+		auto begin_pos = m_storage.tellg();
+		auto begin_iterator = std::istream_iterator<char>(m_storage);
+		auto end_pos = find_free_dir_pos(m_current_directory);
+		m_storage.seekg(end_pos + 1);
+		auto end_iterator = std::istream_iterator<char>(m_storage);
+
+		m_storage.seekp(pos - 1);
+		std::copy(begin_iterator, end_iterator, 
+				  std::ostream_iterator<char>(m_storage, ""));
+
+		mark_block_empty(folder_block);
 	}
 };

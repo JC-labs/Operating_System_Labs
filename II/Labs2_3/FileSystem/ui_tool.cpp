@@ -42,6 +42,10 @@ int process() {
 			filesystem.cd(string.substr(1));
 		} else if (string == "ls") {
 			filesystem.ls(std::cout);
+		} else if (string == "rmdir") {
+			if (!stream) throw std::exception("Folder name is expected.");
+			stream >> string;
+			filesystem.rmdir(string);
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";
