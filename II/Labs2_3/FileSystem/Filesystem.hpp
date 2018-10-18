@@ -101,32 +101,53 @@ protected:
 		if (temp.empty())
 			throw std::exception("Empty folder name wasn't expected");
 
-		char type;
-		m_storage.seekg(dir * block_size + 8);
-		while (type = m_storage.get()) {
-			std::string ttemp;
-			std::getline(m_storage, ttemp, '\0');
-			if (temp == ttemp)
-				if (path.size() == temp.size())
-					return Address(m_storage.tellg()) - Address(ttemp.size()) - 1;
-				else
-					if (type == *Filetype::dir) {
-						Address next_dir;
-						read_f(m_storage, next_dir);
-						m_storage.seekg(next_dir * block_size);
-						read_f(m_storage, next_dir);
-						return find_dir_pos(path.substr(temp.size() + 1), next_dir);
-					} else
-						throw std::exception("Unsupported or broken file.");
-			Address size, tmp;
-			read_f(m_storage, size);
-			if (type == *Filetype::file) {
-				while (size--)
-					read_f(m_storage, tmp);
-			} else if (type == *Filetype::dir) {
+		if (temp == ".") {
+			m_storage.seekg(dir * block_size + 4);
+			Address tmp;
+			read_f(m_storage, tmp);
+			if (path.size() == temp.size())
+				return tmp;
+			else
+				return find_dir_pos(path.substr(temp.size() + 1), tmp);
+		} else if (temp == "..") {
+			m_storage.seekg(dir * block_size);
+			Address tmp;
+			read_f(m_storage, tmp);
+			m_storage.seekg(tmp + 1);
+			while (m_storage.get() != '\0');
+			read_f(m_storage, tmp);
+			if (path.size() == temp.size())
+				return tmp;
+			else
+				return find_dir_pos(path.substr(temp.size() + 1), tmp);
+		} else {
+			char type;
+			m_storage.seekg(dir * block_size + 8);
+			while (type = m_storage.get()) {
+				std::string ttemp;
+				std::getline(m_storage, ttemp, '\0');
+				if (temp == ttemp)
+					if (path.size() == temp.size())
+						return Address(m_storage.tellg()) - Address(ttemp.size()) - 1;
+					else
+						if (type == *Filetype::dir) {
+							Address next_dir;
+							read_f(m_storage, next_dir);
+							m_storage.seekg(next_dir * block_size);
+							read_f(m_storage, next_dir);
+							return find_dir_pos(path.substr(temp.size() + 1), next_dir);
+						} else
+							throw std::exception("Unsupported or broken file.");
+						Address size, tmp;
+						read_f(m_storage, size);
+						if (type == *Filetype::file) {
+							while (size--)
+								read_f(m_storage, tmp);
+						} else if (type == *Filetype::dir) {
 
-			} else
-				throw std::exception("Unsupported or broken file.");
+						} else
+							throw std::exception("Unsupported or broken file.");
+			}
 		}
 		
 		throw std::exception("No such file or directory.");
