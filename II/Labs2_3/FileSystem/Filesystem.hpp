@@ -384,4 +384,55 @@ public:
 
 		mark_block_empty(folder_block);
 	}
+	void truncate(std::string const& filename, size_t const& new_size) {
+		state_check();
+
+		auto pos = find(filename);
+		m_storage.seekg(pos - 1);
+		char type;
+		m_storage >> type;
+		if (type != *Filetype::file)
+			throw std::exception("Filename is expected.");
+		while (m_storage.get() != '\0');
+		
+		std::vector<Address> blocks;
+		Address old_size, temp, temp_size;
+		read_f(m_storage, old_size);
+		temp_size = old_size;
+		while (temp_size--) {
+			read_f(m_storage, temp);
+			blocks.push_back(temp);
+		}
+
+		//Delete old descriptor.
+		auto begin_pos = m_storage.tellg();
+		auto begin_iterator = std::istream_iterator<char>(m_storage);
+		auto end_pos = find_free_dir_pos(m_current_directory);
+		m_storage.seekg(end_pos + 1);
+		auto end_iterator = std::istream_iterator<char>(m_storage);
+
+		m_storage.seekp(pos - 1);
+		std::copy(begin_iterator, end_iterator,
+				  std::ostream_iterator<char>(m_storage, ""));
+
+		//Change size (claim or release blocks).
+		for (Address i = 0; i < new_size - old_size; i++)
+			blocks.push_back(claim_free_block());
+		for (Address i = 0; i < old_size - new_size; i++) {
+			auto tmp = blocks.back();
+			blocks.pop_back();
+			mark_block_empty(tmp);
+		}
+
+		//Create new descriptor.
+		pos = find_free_dir_pos(m_current_directory);
+		Address size = blocks.size();
+
+		m_storage.seekp(pos);
+		m_storage.seekp(-1, std::fstream::cur);
+		m_storage << *Filetype::file << filename << '\0';
+		write_f(m_storage, size);
+		for (auto it : blocks)
+			write_f(m_storage, it);
+	}
 };

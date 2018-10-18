@@ -5,6 +5,7 @@
 int process() {
 	Filesystem<> filesystem;
 	std::string string;
+	size_t size;
 
 	std::cout << ": ";
 	while (std::getline(std::cin, string)) {
@@ -46,6 +47,12 @@ int process() {
 			if (!stream) throw std::exception("Folder name is expected.");
 			stream >> string;
 			filesystem.rmdir(string);
+		} else if (string == "truncate") {
+			if (!stream) throw std::exception("File name is expected.");
+			stream >> string;
+			if (!stream) throw std::exception("New file size is expected.");
+			stream >> size;
+			filesystem.truncate(string, size);
 		} else
 			std::cout << "Unknown command.\n";
 		std::cout << ": ";
