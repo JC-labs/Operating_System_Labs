@@ -60,6 +60,23 @@ protected:
 		}
 		throw std::exception("All of the blocks are occupied. It's impossible to allocate memory.");
 	}
+	Address find_free_dir_pos(Address const& dir) {
+		state_check();
+
+		m_storage.seekg(dir * block_size + 8);
+		while (m_storage.get()) {
+			while (m_storage.get() != '\0');
+			Address size, temp;
+			read_f(m_storage, size);
+			while (size--)
+				read_f(m_storage, temp);
+		}
+
+		return Address(m_storage.tellg());
+	}
+	Address find_dir_pos(Address const& dir, std::string const& name) {
+
+	}
 public:
 	explicit Filesystem() : m_current_directory(m_root_directory) {
 		static_assert(block_size > 16);
@@ -71,8 +88,6 @@ public:
 		tf.open(filename, std::fstream::binary);
 		if (!tf)
 			throw std::exception("Storage is inaccessible.");
-		
-		//tf << *Filetype::dir; //root_dir type
 
 		Address bff = 0;
 		write_f(tf, bff); //root_dir's '..'
@@ -113,16 +128,7 @@ public:
 	void create(std::string const& name) {
 		state_check();
 
-		m_storage.seekg(m_current_directory * block_size + 8);
-		while (m_storage.get()) {
-			while (m_storage.get() != '\0');
-			Address size, temp;
-			read_f(m_storage, size);
-			while (size--)
-				read_f(m_storage, temp);
-		}
-
-		auto pos = Address(m_storage.tellg());
+		auto pos = find_free_dir_pos(m_current_directory);
 		auto addr = claim_free_block();
 		Address size = 1;
 
@@ -134,20 +140,10 @@ public:
 	}
 	void mkdir(std::string const& name) {
 		state_check();
-		
-		m_storage.seekg(m_current_directory * block_size + 8);
-		while (m_storage.get()) {
-			while (m_storage.get() != '\0');
-			Address size, temp;
-			read_f(m_storage, size);
-			while (size--)
-				read_f(m_storage, temp);
-		}
 
-		auto pos = Address(m_storage.tellg());
+		auto pos = find_free_dir_pos(m_current_directory);
 		auto addr = claim_free_block();
 		m_storage.seekp(addr * block_size);
-		//m_storage << *Filetype::dir; //dir type
 		write_f(m_storage, pos); //dir's '..'
 		write_f(m_storage, addr); //dir's '.'
 		m_storage << '\0';
